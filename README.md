@@ -42,7 +42,7 @@ Configuration is done via properties.  Many of these are the same as the
 standard Java client.
 
 <table>
-  <tr> <th>Property</th> <th>Defaut</th> <th>Description</th>
+  <tr> <th>Property</th> <th>Defaut</th> <th>Description</th> </tr>
   <tr> <td>metadata.broker.list</td> <td></td> <td></td> </tr>
   <tr> <td>requrest.required.acks</td> <td></td> <td></td> </tr>
   <tr> <td>request.timeout.ms</td> <td></td> <td></td> </tr>
