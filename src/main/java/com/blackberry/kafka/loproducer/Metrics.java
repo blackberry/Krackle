@@ -1,4 +1,4 @@
-package com.blackberry.kafka.superproducer;
+package com.blackberry.kafka.loproducer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,11 +49,11 @@ public class Metrics {
           TimeUnit.MILLISECONDS);
     }
 
-    receivedTotal = metrics.meter(MetricRegistry.name(KafkaSuperProducer.class,
+    receivedTotal = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
         "total messages received"));
-    sentTotal = metrics.meter(MetricRegistry.name(KafkaSuperProducer.class,
+    sentTotal = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
         "total messages sent"));
-    droppedTotal = metrics.meter(MetricRegistry.name(KafkaSuperProducer.class,
+    droppedTotal = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
         "total messages dropped"));
   }
 
@@ -62,21 +62,21 @@ public class Metrics {
   public synchronized void addTopic(String topic) {
     m = receivedByTopic.get(topic);
     if (m == null) {
-      m = metrics.meter(MetricRegistry.name(KafkaSuperProducer.class,
+      m = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
           "messages received : " + topic));
       receivedByTopic.put(topic, m);
     }
 
     m = sentByTopic.get(topic);
     if (m == null) {
-      m = metrics.meter(MetricRegistry.name(KafkaSuperProducer.class,
+      m = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
           "messages sent : " + topic));
       sentByTopic.put(topic, m);
     }
 
     m = droppedByTopic.get(topic);
     if (m == null) {
-      m = metrics.meter(MetricRegistry.name(KafkaSuperProducer.class,
+      m = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
           "messages dropped : " + topic));
       droppedByTopic.put(topic, m);
     }

@@ -1,4 +1,4 @@
-package com.blackberry.kafka.superproducer;
+package com.blackberry.kafka.loproducer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,9 +11,9 @@ import java.util.zip.CRC32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class KafkaSuperProducer {
+public class LowOverheadProducer {
   private static final Logger LOG = LoggerFactory
-      .getLogger(KafkaSuperProducer.class);
+      .getLogger(LowOverheadProducer.class);
 
   private Configuration conf;
 
@@ -84,7 +84,7 @@ public class KafkaSuperProducer {
 
   private Metrics metrics;
 
-  public KafkaSuperProducer(Configuration conf, String clientId, String topic,
+  public LowOverheadProducer(Configuration conf, String clientId, String topic,
       String key) throws Exception {
     LOG.info("New {} ({},{})", new Object[] { this.getClass().getName(), topic,
         clientId });

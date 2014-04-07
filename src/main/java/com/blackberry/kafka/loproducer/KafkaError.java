@@ -1,4 +1,4 @@
-package com.blackberry.kafka.superproducer;
+package com.blackberry.kafka.loproducer;
 
 public enum KafkaError {
   NoError((short) 0, "No error--it worked!"), //

@@ -1,4 +1,4 @@
-package com.blackberry.kafka.superproducer;
+package com.blackberry.kafka.loproducer;
 
 import java.nio.charset.Charset;
 
