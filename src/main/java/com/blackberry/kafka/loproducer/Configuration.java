@@ -15,7 +15,8 @@ public class Configuration {
   protected static final int ONE_MB = 1024 * 1024;
 
   private List<String> metadataBrokerList;
-  private short requrestRequiredAcks;
+  private long queueBufferingMaxMs;
+  private short requestRequiredAcks;
   private int requestTimeoutMs;
   private int messageSendMaxRetries;
   private int retryBackoffMs;
@@ -49,14 +50,20 @@ public class Configuration {
     }
     LOG.info("metadata.broker.list = {}", metadataBrokerList);
 
-    requrestRequiredAcks = Short.parseShort(props.getProperty(
-        "request.required.acks", "1"));
-    if (requrestRequiredAcks != -1 && requrestRequiredAcks != 0
-        && requrestRequiredAcks != 1) {
-      throw new Exception("request.required.acks can only be -1, 0 or 1.  Got "
-          + requrestRequiredAcks);
+    queueBufferingMaxMs = Long.parseLong(props.getProperty(
+        "queue.buffering.max.ms", "5000"));
+    if (queueBufferingMaxMs < 0) {
+      throw new Exception("queue.buffering.max.ms cannot be negative.");
     }
-    LOG.info("request.required.acks = {}", requrestRequiredAcks);
+
+    requestRequiredAcks = Short.parseShort(props.getProperty(
+        "request.required.acks", "1"));
+    if (requestRequiredAcks != -1 && requestRequiredAcks != 0
+        && requestRequiredAcks != 1) {
+      throw new Exception("request.required.acks can only be -1, 0 or 1.  Got "
+          + requestRequiredAcks);
+    }
+    LOG.info("request.required.acks = {}", requestRequiredAcks);
 
     requestTimeoutMs = Integer.parseInt(props.getProperty("request.timeout.ms",
         "10000"));
@@ -154,12 +161,20 @@ public class Configuration {
     this.metadataBrokerList = metadataBrokerList;
   }
 
-  public short getRequrestRequiredAcks() {
-    return requrestRequiredAcks;
+  public long getQueueBufferingMaxMs() {
+    return queueBufferingMaxMs;
   }
 
-  public void setRequrestRequiredAcks(short requrestRequiredAcks) {
-    this.requrestRequiredAcks = requrestRequiredAcks;
+  public void setQueueBufferingMaxMs(long queueBufferingMaxMs) {
+    this.queueBufferingMaxMs = queueBufferingMaxMs;
+  }
+
+  public short getRequestRequiredAcks() {
+    return requestRequiredAcks;
+  }
+
+  public void setRequrestRequiredAcks(short requestRequiredAcks) {
+    this.requestRequiredAcks = requestRequiredAcks;
   }
 
   public int getRequestTimeoutMs() {

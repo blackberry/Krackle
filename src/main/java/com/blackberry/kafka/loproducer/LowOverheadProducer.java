@@ -6,6 +6,9 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 
 import org.slf4j.Logger;
@@ -36,6 +39,7 @@ public class LowOverheadProducer {
   private int compressionLevel;
   private int retryBackoffMs;
   private long topicMetadataRefreshIntervalMs;
+  private long queueBufferingMaxMs;
 
   // Store the uncompressed message set that we will be compressing later.
   private int messageBufferSize;
@@ -82,6 +86,9 @@ public class LowOverheadProducer {
   private OutputStream out;
   private InputStream in;
 
+  private ScheduledExecutorService scheduledExecutor = Executors
+      .newSingleThreadScheduledExecutor();
+
   private Metrics metrics;
 
   public LowOverheadProducer(Configuration conf, String clientId, String topic,
@@ -107,6 +114,14 @@ public class LowOverheadProducer {
 
     configure();
 
+    // Start a periodic sender to ensure that things get sent from time to time.
+    scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+      @Override
+      public void run() {
+        send(null, 0, 0);
+      }
+    }, queueBufferingMaxMs, queueBufferingMaxMs, TimeUnit.MILLISECONDS);
+
     // Try to do this. If it fails, then we can try again when it's time to
     // send.
     try {
@@ -120,7 +135,7 @@ public class LowOverheadProducer {
   }
 
   private void configure() throws Exception {
-    requiredAcks = conf.getRequrestRequiredAcks();
+    requiredAcks = conf.getRequestRequiredAcks();
     retryBackoffMs = conf.getRetryBackoffMs();
     brokerTimeout = conf.getRequestTimeoutMs();
     retries = conf.getMessageSendMaxRetries();
@@ -128,6 +143,7 @@ public class LowOverheadProducer {
     sendBufferSize = conf.getSendBufferSize();
     responseBufferSize = conf.getResponseBufferSize();
     topicMetadataRefreshIntervalMs = conf.getTopicMetadataRefreshIntervalMs();
+    queueBufferingMaxMs = conf.getQueueBufferingMaxMs();
 
     String compressionCodec = conf.getCompressionCodec();
     compressionLevel = conf.getCompressionLevel();
@@ -197,7 +213,16 @@ public class LowOverheadProducer {
 
   // Add a message to the send queue. Takes bytes from buffer from start, up to
   // length bytes.
-  public void send(byte[] buffer, int offset, int length) {
+  public synchronized void send(byte[] buffer, int offset, int length) {
+    // null buffer means send what we have
+    if (buffer == null) {
+      if (batchSize > 0) {
+        sendMessage();
+        batchSize = 0;
+      }
+      return;
+    }
+
     metrics.receivedMark(topicString);
 
     if (messageSetBuffer.remaining() < length + keyLength + 26) {
