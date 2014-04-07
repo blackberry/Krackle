@@ -44,7 +44,8 @@ standard Java client.
 | Description                    | Default | Description |
 |--------------------------------|---------|-------------|
 | metadata.broker.list           |         |             |
-| requrest.required.acks         |         |             |
+| queue.buffering.max.ms         |         |             |
+| request.required.acks          |         |             |
 | request.timeout.ms             |         |             |
 | message.send.max.retries       |         |             |
 | retry.backoff.ms               |         |             |
