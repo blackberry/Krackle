@@ -41,18 +41,17 @@ Configuration
 Configuration is done via properties.  Many of these are the same as the
 standard Java client.
 
-<table>
-  <tr> <th>Property</th> <th>Defaut</th> <th>Description</th> </tr>
-  <tr> <td>metadata.broker.list</td> <td></td> <td></td> </tr>
-  <tr> <td>requrest.required.acks</td> <td></td> <td></td> </tr>
-  <tr> <td>request.timeout.ms</td> <td></td> <td></td> </tr>
-  <tr> <td>message.send.max.retries</td> <td></td> <td></td> </tr>
-  <tr> <td>retry.backoff.ms</td> <td></td> <td></td> </tr>
-  <tr> <td>compression.codec</td> <td></td> <td></td> </tr>
-  <tr> <td>message.buffer.size</td> <td></td> <td></td> </tr>
-  <tr> <td>send.buffer.size</td> <td></td> <td></td> </tr>
-  <tr> <td>response.buffer.size</td> <td></td> <td></td> </tr>
-  <tr> <td>compression.level</td> <td></td> <td></td> </tr>
-  <tr> <td>metrics.to.console</td> <td></td> <td></td> </tr>
-  <tr> <td>metrics.to.console.interval.ms</td> <td></td> <td></td> </tr>
-</table>
+| Description                    | Default | Description |
+|--------------------------------|---------|-------------|
+| metadata.broker.list           |         |             |
+| requrest.required.acks         |         |             |
+| request.timeout.ms             |         |             |
+| message.send.max.retries       |         |             |
+| retry.backoff.ms               |         |             |
+| compression.codec              |         |             |
+| message.buffer.size            |         |             |
+| send.buffer.size               |         |             |
+| response.buffer.size           |         |             |
+| compression.level              |         |             |
+| metrics.to.console             |         |             |
+| metrics.to.console.interval.ms |         |             |
