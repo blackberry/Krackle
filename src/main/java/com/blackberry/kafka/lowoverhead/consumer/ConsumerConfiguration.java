@@ -11,12 +11,12 @@ public class ConsumerConfiguration {
     private static final Logger LOG = LoggerFactory
 	    .getLogger(ConsumerConfiguration.class);
 
-    protected static final int ONE_MB = 1024 * 1024;
-
     private List<String> metadataBrokerList;
     private int fetchMessageMaxBytes;
     private int fetchWaitMaxMs;
     private int fetchMinBytes;
+    private int socketReceiveBufferBytes;
+    private String autoOffsetReset;
 
     public ConsumerConfiguration(Properties props) throws Exception {
 	LOG.info("Building configuration.");
@@ -41,7 +41,7 @@ public class ConsumerConfiguration {
 	LOG.info("metadata.broker.list = {}", metadataBrokerList);
 
 	fetchMessageMaxBytes = Integer.parseInt(props.getProperty(
-		"fetch.message.max.bytes", "" + ONE_MB));
+		"fetch.message.max.bytes", "" + (1024 * 1024)));
 	if (fetchMessageMaxBytes <= 0) {
 	    throw new Exception("fetch.message.max.bytes must be positive.");
 	}
@@ -61,6 +61,15 @@ public class ConsumerConfiguration {
 	}
 	LOG.info("fetch.min.bytes = {}", fetchMinBytes);
 
+	socketReceiveBufferBytes = Integer.parseInt(props.getProperty(
+		"socket.receive.buffer.bytes", "" + (64 * 1024)));
+	if (socketReceiveBufferBytes < 0) {
+	    throw new Exception("socket.receive.buffer.bytes must be positive.");
+	}
+	LOG.info("socket.receive.buffer.bytes = {}", socketReceiveBufferBytes);
+
+	autoOffsetReset = props.getProperty("auto.offset.reset", "largest");
+	LOG.info("auto.offset.reset = {}", autoOffsetReset);
     }
 
     public List<String> getMetadataBrokerList() {
@@ -93,6 +102,22 @@ public class ConsumerConfiguration {
 
     public void setFetchMinBytes(int fetchMinBytes) {
 	this.fetchMinBytes = fetchMinBytes;
+    }
+
+    public int getSocketReceiveBufferBytes() {
+	return socketReceiveBufferBytes;
+    }
+
+    public void setSocketReceiveBufferBytes(int socketReceiveBufferBytes) {
+	this.socketReceiveBufferBytes = socketReceiveBufferBytes;
+    }
+
+    public String getAutoOffsetReset() {
+	return autoOffsetReset;
+    }
+
+    public void setAutoOffsetReset(String autoOffsetReset) {
+	this.autoOffsetReset = autoOffsetReset;
     }
 
 }

@@ -162,7 +162,7 @@ public class LowOverheadConsumer {
 
     private int correlationId = 0;
 
-    private void readFromBroker() {
+    private void readFromBroker() throws IOException {
 	while (true) {
 	    if (brokerSocket == null || brokerSocket.isClosed()) {
 		LOG.info("Connecting to broker.");
@@ -176,8 +176,15 @@ public class LowOverheadConsumer {
 		receiveConsumeResponse(correlationId);
 		break;
 	    } catch (OffsetOutOfRangeException e) {
-		LOG.warn("Offset out of range.  Resetting to the earliest offset available.");
-		offset = getEarliestOffset();
+		if (conf.getAutoOffsetReset().equals("smallest")) {
+		    LOG.warn("Offset out of range.  Resetting to the earliest offset available.");
+		    offset = getEarliestOffset();
+		} else if (conf.getAutoOffsetReset().equals("largest")) {
+		    LOG.warn("Offset out of range.  Resetting to the latest offset available.");
+		    offset = getLatestOffset();
+		} else {
+		    throw e;
+		}
 	    } catch (Exception e) {
 		LOG.error("Error getting data from broker.", e);
 
@@ -203,6 +210,17 @@ public class LowOverheadConsumer {
 	    LOG.error("Error getting earliest offset.");
 	}
 	return 0L;
+    }
+
+    private long getLatestOffset() {
+	try {
+	    correlationId++;
+	    sendOffsetRequest(Constants.LATEST_OFFSET, correlationId);
+	    return getOffsetResponse(correlationId);
+	} catch (IOException e) {
+	    LOG.error("Error getting latest offset.");
+	}
+	return Long.MAX_VALUE;
     }
 
     private void sendOffsetRequest(long time, int correlationId)
@@ -469,6 +487,8 @@ public class LowOverheadConsumer {
 			.getPartition(partition).getLeader());
 
 		brokerSocket = new Socket(leader.getHost(), leader.getPort());
+		brokerSocket.setReceiveBufferSize(conf
+			.getSocketReceiveBufferBytes());
 		brokerIn = brokerSocket.getInputStream();
 		brokerOut = brokerSocket.getOutputStream();
 
