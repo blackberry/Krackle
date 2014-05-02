@@ -1,4 +1,4 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead.meta;
 
 import java.util.ArrayList;
 import java.util.List;

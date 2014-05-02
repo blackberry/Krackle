@@ -1,4 +1,4 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead.consumer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,9 +8,11 @@ import java.util.zip.Deflater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Configuration {
+// TODO: There is a lot of cruft here!  Any many things that need adding
+
+public class ConsumerConfiguration {
   private static final Logger LOG = LoggerFactory
-      .getLogger(Configuration.class);
+      .getLogger(ConsumerConfiguration.class);
 
   protected static final int ONE_MB = 1024 * 1024;
 
@@ -30,7 +32,7 @@ public class Configuration {
   private boolean metricsToConsole;
   private int metricsToConsoleIntervalMs;
 
-  public Configuration(Properties props) throws Exception {
+  public ConsumerConfiguration(Properties props) throws Exception {
     LOG.info("Building configuration.");
 
     metadataBrokerList = new ArrayList<String>();
@@ -55,6 +57,7 @@ public class Configuration {
     if (queueBufferingMaxMs < 0) {
       throw new Exception("queue.buffering.max.ms cannot be negative.");
     }
+    LOG.info("queue.buffering.max.ms = {}", queueBufferingMaxMs);
 
     requestRequiredAcks = Short.parseShort(props.getProperty(
         "request.required.acks", "1"));

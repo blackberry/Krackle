@@ -1,4 +1,4 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead.consumer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +35,7 @@ public class Metrics {
     return SingletonHolder.INSTANCE;
   }
 
-  public void configure(Configuration conf) {
+  public void configure(ConsumerConfiguration conf) {
     metrics = new MetricRegistry();
 
     jmxReporter = JmxReporter.forRegistry(metrics).build();
@@ -49,11 +49,11 @@ public class Metrics {
           TimeUnit.MILLISECONDS);
     }
 
-    receivedTotal = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
-        "total messages received"));
-    sentTotal = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
+    receivedTotal = metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "total messages received"));
+    sentTotal = metrics.meter(MetricRegistry.name(LowOverheadConsumer.class,
         "total messages sent"));
-    droppedTotal = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
+    droppedTotal = metrics.meter(MetricRegistry.name(LowOverheadConsumer.class,
         "total messages dropped"));
   }
 
@@ -62,21 +62,21 @@ public class Metrics {
   public synchronized void addTopic(String topic) {
     m = receivedByTopic.get(topic);
     if (m == null) {
-      m = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
+      m = metrics.meter(MetricRegistry.name(LowOverheadConsumer.class,
           "messages received : " + topic));
       receivedByTopic.put(topic, m);
     }
 
     m = sentByTopic.get(topic);
     if (m == null) {
-      m = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
+      m = metrics.meter(MetricRegistry.name(LowOverheadConsumer.class,
           "messages sent : " + topic));
       sentByTopic.put(topic, m);
     }
 
     m = droppedByTopic.get(topic);
     if (m == null) {
-      m = metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
+      m = metrics.meter(MetricRegistry.name(LowOverheadConsumer.class,
           "messages dropped : " + topic));
       droppedByTopic.put(topic, m);
     }

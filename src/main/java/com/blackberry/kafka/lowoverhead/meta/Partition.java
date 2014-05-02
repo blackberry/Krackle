@@ -1,4 +1,4 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead.meta;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -46,6 +46,5 @@ public class Partition {
     return "Partition [partId=" + partId + ", leader=" + leader + ", replicas="
         + replicas + ", inSyncReplicas=" + inSyncReplicas + "]";
   }
-  
-  
+
 }

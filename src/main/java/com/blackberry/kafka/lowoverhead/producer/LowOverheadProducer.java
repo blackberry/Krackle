@@ -1,4 +1,4 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead.producer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,11 +14,20 @@ import java.util.zip.CRC32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.blackberry.kafka.lowoverhead.Constants;
+import com.blackberry.kafka.lowoverhead.KafkaError;
+import com.blackberry.kafka.lowoverhead.compression.Compressor;
+import com.blackberry.kafka.lowoverhead.compression.GzipCompressor;
+import com.blackberry.kafka.lowoverhead.compression.SnappyCompressor;
+import com.blackberry.kafka.lowoverhead.meta.Broker;
+import com.blackberry.kafka.lowoverhead.meta.MetaData;
+import com.blackberry.kafka.lowoverhead.meta.Topic;
+
 public class LowOverheadProducer {
   private static final Logger LOG = LoggerFactory
       .getLogger(LowOverheadProducer.class);
 
-  private Configuration conf;
+  private ProducerConfiguration conf;
 
   private String clientIdString;
   private byte[] clientIdBytes;
@@ -86,13 +95,15 @@ public class LowOverheadProducer {
   private OutputStream out;
   private InputStream in;
 
+  private boolean closed = false;
+
   private ScheduledExecutorService scheduledExecutor = Executors
       .newSingleThreadScheduledExecutor();
 
   private Metrics metrics;
 
-  public LowOverheadProducer(Configuration conf, String clientId, String topic,
-      String key) throws Exception {
+  public LowOverheadProducer(ProducerConfiguration conf, String clientId,
+      String topic, String key) throws Exception {
     LOG.info("New {} ({},{})", new Object[] { this.getClass().getName(), topic,
         clientId });
     this.conf = conf;
@@ -171,12 +182,14 @@ public class LowOverheadProducer {
 
   private void updateMetaDataAndConnection(boolean force) {
     LOG.info("Updating metadata");
-    metadata = MetaData.getMetaData(conf, topicString, clientIdString);
+    metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);
     LOG.info("Metadata: {}", metadata);
 
     Topic topic = metadata.getTopic(topicString);
 
     partition = Math.abs(keyString.hashCode()) % topic.getNumPartitions();
+    LOG.info("Sending to partition {} of {}", partition,
+        topic.getNumPartitions());
 
     broker = metadata.getBroker(topic.getPartition(partition).getLeader());
 
@@ -184,6 +197,8 @@ public class LowOverheadProducer {
     String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
     if (force || brokerAddress == null
         || brokerAddress.equals(newBrokerAddress) == false) {
+      brokerAddress = newBrokerAddress;
+      LOG.info("Changing brokers to {}", broker);
 
       if (socket != null) {
         try {
@@ -195,6 +210,7 @@ public class LowOverheadProducer {
 
       try {
         socket = new Socket(broker.getHost(), broker.getPort());
+        LOG.info("Connected to {}", socket);
         in = socket.getInputStream();
         out = socket.getOutputStream();
       } catch (UnknownHostException e) {
@@ -202,8 +218,6 @@ public class LowOverheadProducer {
       } catch (IOException e) {
         LOG.error("Error connecting to broker.", e);
       }
-
-      brokerAddress = newBrokerAddress;
     }
 
     lastMetadataRefresh = System.currentTimeMillis();
@@ -214,6 +228,11 @@ public class LowOverheadProducer {
   // Add a message to the send queue. Takes bytes from buffer from start, up to
   // length bytes.
   public synchronized void send(byte[] buffer, int offset, int length) {
+    if (closed) {
+      LOG.warn("Trying to send data on a closed producer.");
+      return;
+    }
+
     // null buffer means send what we have
     if (buffer == null) {
       if (batchSize > 0) {
@@ -239,7 +258,7 @@ public class LowOverheadProducer {
     messageSetBuffer.position(crcPos + 4);
 
     messageSetBuffer.put(Constants.MAGIC_BYTE); // magic number
-    messageSetBuffer.put(Constants.ATTR_NO_COMPRESSION); // no compression
+    messageSetBuffer.put(Constants.NO_COMPRESSION); // no compression
     messageSetBuffer.putInt(keyLength); // Key length
     messageSetBuffer.put(keyBytes); // Key
     messageSetBuffer.putInt(length); // Value length
@@ -257,6 +276,7 @@ public class LowOverheadProducer {
   private void sendMessage() {
     // New message, new id
     correlationId++;
+    // LOG.info("Sending message {}", correlationId);
 
     /* headers */
     // Skip 4 bytes for the size
@@ -320,14 +340,10 @@ public class LowOverheadProducer {
         messageCompressedSize = compressor.compress(messageSetBytes, 0,
             messageSetBuffer.position(), toSendBytes,
             toSendBuffer.position() + 4);
-        // LOG.info("Compressed message size is {}", messageCompressedSize);
       } catch (IOException e) {
         LOG.error("Exception while compressing data.  (data lost).", e);
         return;
       }
-      // messageCompressedSize = messageSetBuffer.position();
-      // System.arraycopy(messageSetBytes, 0, toSendBytes,
-      // toSendBuffer.position() + 4, messageSetBuffer.position());
 
       // Write the size
       toSendBuffer.putInt(messageCompressedSize);
@@ -392,8 +408,14 @@ public class LowOverheadProducer {
           }
           responseErrorCode = responseBuffer.getShort(18 + topicLength);
           if (responseErrorCode != KafkaError.NoError.getCode()) {
-            throw new Exception("Got error from broker " + responseErrorCode
-                + "(" + getErrorString(responseErrorCode) + ")");
+            throw new Exception("Got error from broker. Error Code "
+                + responseErrorCode + " (" + getErrorString(responseErrorCode)
+                + ")");
+          }
+
+          // Clear the responses, if there is anything else to read
+          while (in.available() > 0) {
+            in.read(responseBytes, 0, responseBytes.length);
           }
         }
 
@@ -446,10 +468,12 @@ public class LowOverheadProducer {
     toSendBuffer.clear();
   }
 
-  public void close() {
+  public synchronized void close() {
+    LOG.info("Closing producer.");
     if (messageSetBuffer.position() > 0) {
       sendMessage();
     }
+    closed = true;
   }
 
 }

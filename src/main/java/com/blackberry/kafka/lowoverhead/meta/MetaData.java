@@ -1,4 +1,4 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead.meta;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -14,6 +15,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.blackberry.kafka.lowoverhead.Constants;
+
 public class MetaData {
   private static final Logger LOG = LoggerFactory.getLogger(MetaData.class);
 
@@ -21,14 +24,21 @@ public class MetaData {
   private Map<String, Topic> topics = new HashMap<String, Topic>();
   private int correlationId;
 
-  public static MetaData getMetaData(Configuration conf, String topicString,
-      String clientIdString) {
+  public static MetaData getMetaData(String metadataBrokerListString,
+      String topicString, String clientIdString) {
+    List<String> metadataBrokerList = Arrays.asList(metadataBrokerListString
+        .split(","));
+    return getMetaData(metadataBrokerList, topicString, clientIdString);
+  }
+
+  public static MetaData getMetaData(List<String> metadataBrokerList,
+      String topicString, String clientIdString) {
     MetaData metadata = new MetaData();
     metadata.setCorrelationId((int) System.currentTimeMillis());
 
     // Get the broker seeds from the config.
     List<HostAndPort> seedBrokers = new ArrayList<HostAndPort>();
-    for (String hnp : conf.getMetadataBrokerList()) {
+    for (String hnp : metadataBrokerList) {
       String[] hostPort = hnp.split(":", 2);
       seedBrokers.add(new HostAndPort(hostPort[0], Integer
           .parseInt(hostPort[1])));

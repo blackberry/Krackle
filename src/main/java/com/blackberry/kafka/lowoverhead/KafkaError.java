@@ -1,4 +1,4 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead;
 
 public enum KafkaError {
   NoError((short) 0, "No error--it worked!"), //
@@ -46,6 +46,15 @@ public enum KafkaError {
 
   public String getMessage() {
     return message;
+  }
+
+  public static String getMessage(short errorCode) {
+    for (KafkaError e : KafkaError.values()) {
+      if (e.getCode() == errorCode) {
+        return e.getMessage();
+      }
+    }
+    return null;
   }
 
 }

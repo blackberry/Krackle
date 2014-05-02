@@ -1,10 +1,12 @@
-package com.blackberry.kafka.loproducer;
+package com.blackberry.kafka.lowoverhead.compression;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
+
+import com.blackberry.kafka.lowoverhead.Constants;
 
 public class GzipCompressor implements Compressor {
   private static final byte[] HEADER_BYTES = new byte[] //
@@ -33,7 +35,7 @@ public class GzipCompressor implements Compressor {
 
   @Override
   public byte getAttribute() {
-    return Constants.ATTR_GZIP;
+    return Constants.GZIP;
   }
 
   @Override

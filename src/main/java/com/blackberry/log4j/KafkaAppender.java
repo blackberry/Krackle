@@ -1,4 +1,4 @@
-package com.blackberry.kafka.log4j;
+package com.blackberry.log4j;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -10,15 +10,16 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.spi.LoggingEvent;
 
-import com.blackberry.kafka.loproducer.Configuration;
-import com.blackberry.kafka.loproducer.LowOverheadProducer;
+import com.blackberry.kafka.lowoverhead.producer.LowOverheadProducer;
+import com.blackberry.kafka.lowoverhead.producer.Metrics;
+import com.blackberry.kafka.lowoverhead.producer.ProducerConfiguration;
 
 public class KafkaAppender extends AppenderSkeleton {
   private static final Charset UTF8 = Charset.forName("UTF8");
 
   private Logger logger;
 
-  private Properties props;
+  private Properties props = new Properties();
   private String clientId = null;
   private String topic;
   private String key = null;
@@ -35,6 +36,7 @@ public class KafkaAppender extends AppenderSkeleton {
     if (clientId == null) {
       try {
         clientId = InetAddress.getLocalHost().getHostName();
+        props.setProperty("client.id", clientId);
       } catch (UnknownHostException e) {
         logger
             .error("Error getting hostname for default clientId while configuring "
@@ -44,6 +46,7 @@ public class KafkaAppender extends AppenderSkeleton {
     if (key == null) {
       try {
         key = InetAddress.getLocalHost().getHostName();
+        props.setProperty("key", key);
       } catch (UnknownHostException e) {
         logger
             .error("Error getting hostname for default key while configuring "
@@ -51,9 +54,17 @@ public class KafkaAppender extends AppenderSkeleton {
       }
     }
 
+    ProducerConfiguration conf = null;
     try {
-      producer = new LowOverheadProducer(new Configuration(props), clientId,
-          topic, key);
+      conf = new ProducerConfiguration(props);
+    } catch (Exception e) {
+      logger.error("Error creating " + LowOverheadProducer.class
+          + ".  Cannot log to Kafka.", e);
+    }
+    Metrics.getInstance().configure(conf);
+
+    try {
+      producer = new LowOverheadProducer(conf, clientId, topic, key);
     } catch (Exception e) {
       logger.error("Error creating " + LowOverheadProducer.class
           + ".  Cannot log to Kafka.", e);
