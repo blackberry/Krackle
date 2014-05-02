@@ -26,9 +26,7 @@ public class ProducerConfiguration {
     private String compressionCodec;
     private int compressionLevel;
     private long topicMetadataRefreshIntervalMs;
-
-    private boolean metricsToConsole;
-    private int metricsToConsoleIntervalMs;
+    private long queueEnqueueTimeoutMs;
 
     public ProducerConfiguration(Properties props) throws Exception {
 	LOG.info("Building configuration.");
@@ -147,19 +145,13 @@ public class ProducerConfiguration {
 	}
 	LOG.info("gzip.compression.level = {}", compressionLevel);
 
-	metricsToConsole = Boolean.parseBoolean(props.getProperty(
-		"metrics.to.console", "false"));
-	LOG.info("metrics.to.console = {}", metricsToConsole);
-
-	metricsToConsoleIntervalMs = Integer.parseInt(props.getProperty(
-		"metrics.to.console.interval.ms", "60000"));
-	if (metricsToConsoleIntervalMs < 1) {
+	queueEnqueueTimeoutMs = Long.parseLong(props.getProperty(
+		"queue.enqueue.timeout.ms", "-1"));
+	if (queueEnqueueTimeoutMs != -1 && queueEnqueueTimeoutMs < 0) {
 	    throw new Exception(
-		    "metrics.to.console.intercal.ms must be greater than 0.  Got "
-			    + metricsToConsoleIntervalMs);
+		    "queue.enqueue.timeout.ms must either be -1 or a non-negative.");
 	}
-	LOG.info("metrics.to.console.interval.ms = {}",
-		metricsToConsoleIntervalMs);
+	LOG.info("queue.enqueue.timeout.ms = {}", queueEnqueueTimeoutMs);
     }
 
     public List<String> getMetadataBrokerList() {
@@ -182,7 +174,7 @@ public class ProducerConfiguration {
 	return requestRequiredAcks;
     }
 
-    public void setRequrestRequiredAcks(short requestRequiredAcks) {
+    public void setRequestRequiredAcks(short requestRequiredAcks) {
 	this.requestRequiredAcks = requestRequiredAcks;
     }
 
@@ -234,15 +226,6 @@ public class ProducerConfiguration {
 	this.responseBufferSize = responseBufferSize;
     }
 
-    public long getTopicMetadataRefreshIntervalMs() {
-	return topicMetadataRefreshIntervalMs;
-    }
-
-    public void setTopicMetadataRefreshIntervalMs(
-	    long topicMetadataRefreshIntervalMs) {
-	this.topicMetadataRefreshIntervalMs = topicMetadataRefreshIntervalMs;
-    }
-
     public String getCompressionCodec() {
 	return compressionCodec;
     }
@@ -259,20 +242,21 @@ public class ProducerConfiguration {
 	this.compressionLevel = compressionLevel;
     }
 
-    public boolean isMetricsToConsole() {
-	return metricsToConsole;
+    public long getTopicMetadataRefreshIntervalMs() {
+	return topicMetadataRefreshIntervalMs;
     }
 
-    public void setMetricsToConsole(boolean metricsToConsole) {
-	this.metricsToConsole = metricsToConsole;
+    public void setTopicMetadataRefreshIntervalMs(
+	    long topicMetadataRefreshIntervalMs) {
+	this.topicMetadataRefreshIntervalMs = topicMetadataRefreshIntervalMs;
     }
 
-    public int getMetricsToConsoleIntervalMs() {
-	return metricsToConsoleIntervalMs;
+    public long getQueueEnqueueTimeoutMs() {
+	return queueEnqueueTimeoutMs;
     }
 
-    public void setMetricsToConsoleIntervalMs(int metricsToConsoleIntervalMs) {
-	this.metricsToConsoleIntervalMs = metricsToConsoleIntervalMs;
+    public void setQueueEnqueueTimeoutMs(long queueEnqueueTimeoutMs) {
+	this.queueEnqueueTimeoutMs = queueEnqueueTimeoutMs;
     }
 
 }

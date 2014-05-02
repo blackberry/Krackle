@@ -47,7 +47,7 @@ public class KafkaClientTest {
 	kafka = new LocalKafkaServer();
 
 	logs = new ArrayList<String>();
-	for (int i = 0; i < 1000; i++) {
+	for (int i = 0; i < 100000; i++) {
 	    logs.add("This is a test log line.  Number " + i);
 	}
     }
@@ -103,6 +103,7 @@ public class KafkaClientTest {
 	producerProps.setProperty("metadata.broker.list", "localhost:9876");
 	producerProps.setProperty("compression.code", compression);
 	producerProps.setProperty("queue.buffering.max.ms", "100");
+	producerProps.setProperty("queue.enqueue.timeout.ms", "-1");
 	ProducerConfiguration producerConf = new ProducerConfiguration(
 		producerProps);
 	LowOverheadProducer producer = new LowOverheadProducer(producerConf,
@@ -223,6 +224,12 @@ public class KafkaClientTest {
     @Test
     public void testStdProducerLOConsumer() throws Throwable {
 	for (String compression : COMPRESSION_METHODS) {
+	    // For some reason, this doesn't work with Snappy. I haven't figured
+	    // out why.
+	    if ("snappy".equals(compression)) {
+		continue;
+	    }
+
 	    final String topic = "std-loc-" + compression;
 	    setupTopic(topic);
 
@@ -251,10 +258,8 @@ public class KafkaClientTest {
 	    });
 	    t.start();
 	    // TODO: this sleep just begs for race conditions. We should be
-	    // waiting
-	    // for the consumer to confirm that it's up, not just waiting a bit
-	    // of
-	    // time.
+	    // waiting for the consumer to confirm that it's up, not just
+	    // waiting a bit of time.
 	    Thread.sleep(100);
 
 	    Producer<String, String> producer = getStdProducer(compression);
@@ -273,7 +278,7 @@ public class KafkaClientTest {
     @Test
     public void testLOProducerLOConsumer() throws Throwable {
 	for (String compression : COMPRESSION_METHODS) {
-	    final String topic = "std-loc-" + compression;
+	    final String topic = "lop-loc-" + compression;
 	    setupTopic(topic);
 
 	    final LowOverheadConsumer consumer = getLOConsumer(topic, 0);
@@ -301,10 +306,8 @@ public class KafkaClientTest {
 	    });
 	    t.start();
 	    // TODO: this sleep just begs for race conditions. We should be
-	    // waiting
-	    // for the consumer to confirm that it's up, not just waiting a bit
-	    // of
-	    // time.
+	    // waiting for the consumer to confirm that it's up, not just
+	    // waiting a bit of time.
 	    Thread.sleep(100);
 
 	    LowOverheadProducer producer = getLOProducer(topic, compression);

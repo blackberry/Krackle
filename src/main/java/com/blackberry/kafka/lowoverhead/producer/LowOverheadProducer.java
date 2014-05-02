@@ -6,9 +6,13 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.zip.CRC32;
 
 import org.slf4j.Logger;
@@ -54,9 +58,8 @@ public class LowOverheadProducer {
     private long queueBufferingMaxMs;
 
     // Store the uncompressed message set that we will be compressing later.
-    private int messageBufferSize;
-    private byte[] messageSetBytes;
-    private ByteBuffer messageSetBuffer;
+    private int activeBuffer = 0;
+    private MessageSetBuffer[] messageSetBuffers;
 
     // Store the compressed message + headers.
     // Generally, this needs to be bigger than the messageSetBufferSize
@@ -85,7 +88,6 @@ public class LowOverheadProducer {
     private int responseCorrelationId;
     private short responseErrorCode;
     private int retry;
-    private int batchSize = 0;
 
     private CRC32 crc = new CRC32();
 
@@ -102,6 +104,7 @@ public class LowOverheadProducer {
 
     private ScheduledExecutorService scheduledExecutor = Executors
 	    .newSingleThreadScheduledExecutor();
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private MetricRegistry metrics;
     private Meter receivedTotal = null;
@@ -162,7 +165,11 @@ public class LowOverheadProducer {
 	scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
 	    @Override
 	    public void run() {
-		send(null, 0, 0);
+		try {
+		    send(null, 0, 0);
+		} catch (Exception e) {
+		    // That's fine.
+		}
 	    }
 	}, queueBufferingMaxMs, queueBufferingMaxMs, TimeUnit.MILLISECONDS);
 
@@ -183,7 +190,6 @@ public class LowOverheadProducer {
 	retryBackoffMs = conf.getRetryBackoffMs();
 	brokerTimeout = conf.getRequestTimeoutMs();
 	retries = conf.getMessageSendMaxRetries();
-	messageBufferSize = conf.getMessageBufferSize();
 	sendBufferSize = conf.getSendBufferSize();
 	responseBufferSize = conf.getResponseBufferSize();
 	topicMetadataRefreshIntervalMs = conf
@@ -193,8 +199,11 @@ public class LowOverheadProducer {
 	String compressionCodec = conf.getCompressionCodec();
 	compressionLevel = conf.getCompressionLevel();
 
-	messageSetBytes = new byte[messageBufferSize];
-	messageSetBuffer = ByteBuffer.wrap(messageSetBytes);
+	int messageBufferSize = conf.getMessageBufferSize();
+	messageSetBuffers = new MessageSetBuffer[2];
+	for (int i = 0; i < messageSetBuffers.length; i++) {
+	    messageSetBuffers[i] = new MessageSetBuffer(this, messageBufferSize);
+	}
 
 	toSendBytes = new byte[sendBufferSize];
 	toSendBuffer = ByteBuffer.wrap(toSendBytes);
@@ -260,20 +269,34 @@ public class LowOverheadProducer {
 
     private int crcPos;
 
+    private MessageSetBuffer activeMessageSetBuffer;
+    private ByteBuffer activeByteBuffer;
+    private Future<?> sendFuture = null;
+
     // Add a message to the send queue. Takes bytes from buffer from start, up
-    // to
-    // length bytes.
-    public synchronized void send(byte[] buffer, int offset, int length) {
+    // to length bytes.
+    public synchronized void send(byte[] buffer, int offset, int length)
+	    throws Exception {
 	if (closed) {
 	    LOG.warn("Trying to send data on a closed producer.");
 	    return;
 	}
 
+	activeMessageSetBuffer = messageSetBuffers[activeBuffer];
+	activeByteBuffer = activeMessageSetBuffer.getBuffer();
+
 	// null buffer means send what we have
 	if (buffer == null) {
-	    if (batchSize > 0) {
-		sendMessage();
-		batchSize = 0;
+	    if (activeMessageSetBuffer.getBatchSize() > 0) {
+
+		// if the sendFuture is null, we've never sent before and it's
+		// safe to send. Otherwise, wait for the current send to finish
+		// before starting a new one.
+		if (sendFuture != null) {
+		    sendFuture.get();
+		}
+		sendFuture = executor.submit(messageSetBuffers[activeBuffer]);
+		activeBuffer = (activeBuffer + 1) % 2;
 	    }
 	    return;
 	}
@@ -281,36 +304,65 @@ public class LowOverheadProducer {
 	received.mark();
 	receivedTotal.mark();
 
-	if (messageSetBuffer.remaining() < length + keyLength + 26) {
-	    sendMessage();
-	    batchSize = 0;
+	if (activeMessageSetBuffer.getBuffer().remaining() < length + keyLength
+		+ 26) {
+	    // if the sendFuture is null, we've never sent before and it's
+	    // safe to send. Otherwise, wait for the current send to finish
+	    // before starting a new one.
+	    if (sendFuture != null) {
+		// Since there is not enough room, we have to wait or reject. If
+		// we wait, for how long?
+
+		if (conf.getQueueEnqueueTimeoutMs() == -1) {
+		    // Wait forever
+		    sendFuture.get();
+		} else {
+		    // wait some other amount of time. Possibly 0
+		    try {
+			sendFuture.get(conf.getQueueEnqueueTimeoutMs(),
+				TimeUnit.MILLISECONDS);
+		    } catch (TimeoutException e) {
+			return;
+		    } catch (Exception e) {
+			LOG.error("Error while waiting for send to finish.", e);
+		    }
+		}
+	    }
+	    sendFuture = executor.submit(messageSetBuffers[activeBuffer]);
+
+	    activeBuffer = (activeBuffer + 1) % 2;
+	    activeMessageSetBuffer = messageSetBuffers[activeBuffer];
+	    activeByteBuffer = activeMessageSetBuffer.getBuffer();
 	}
 	// LOG.info("Received: {}", new String(buffer, offset, length, UTF8));
 
-	messageSetBuffer.putLong(0L); // Offset
+	activeByteBuffer.putLong(0L); // Offset
 	// Size of uncompressed message
-	messageSetBuffer.putInt(length + keyLength + 14);
+	activeByteBuffer.putInt(length + keyLength + 14);
 
-	crcPos = messageSetBuffer.position();
-	messageSetBuffer.position(crcPos + 4);
+	crcPos = activeByteBuffer.position();
+	activeByteBuffer.position(crcPos + 4);
 
-	messageSetBuffer.put(Constants.MAGIC_BYTE); // magic number
-	messageSetBuffer.put(Constants.NO_COMPRESSION); // no compression
-	messageSetBuffer.putInt(keyLength); // Key length
-	messageSetBuffer.put(keyBytes); // Key
-	messageSetBuffer.putInt(length); // Value length
-	messageSetBuffer.put(buffer, offset, length); // Value
+	activeByteBuffer.put(Constants.MAGIC_BYTE); // magic
+						    // number
+	activeByteBuffer.put(Constants.NO_COMPRESSION); // no
+							// compression
+	activeByteBuffer.putInt(keyLength); // Key length
+	activeByteBuffer.put(keyBytes); // Key
+	activeByteBuffer.putInt(length); // Value length
+	activeByteBuffer.put(buffer, offset, length); // Value
 
 	crc.reset();
-	crc.update(messageSetBytes, crcPos + 4, length + keyLength + 10);
+	crc.update(messageSetBuffers[activeBuffer].getBytes(), crcPos + 4,
+		length + keyLength + 10);
 
-	messageSetBuffer.putInt(crcPos, (int) crc.getValue());
+	activeByteBuffer.putInt(crcPos, (int) crc.getValue());
 
-	batchSize++;
+	activeMessageSetBuffer.incrementBatchSize();
     }
 
     // Send accumulated messages
-    private void sendMessage() {
+    protected void sendMessage(MessageSetBuffer messageSetBuffer) {
 	// New message, new id
 	correlationId++;
 	// LOG.info("Sending message {}", correlationId);
@@ -346,10 +398,11 @@ public class LowOverheadProducer {
 	    // message here.
 
 	    // Mesage set size
-	    toSendBuffer.putInt(messageSetBuffer.position());
+	    toSendBuffer.putInt(messageSetBuffer.getBuffer().position());
 
 	    // Message set
-	    toSendBuffer.put(messageSetBytes, 0, messageSetBuffer.position());
+	    toSendBuffer.put(messageSetBuffer.getBytes(), 0, messageSetBuffer
+		    .getBuffer().position());
 
 	} else {
 	    // If we are compressing, then do that.
@@ -375,8 +428,9 @@ public class LowOverheadProducer {
 
 	    // Compress the value here, into the toSendBuffer
 	    try {
-		messageCompressedSize = compressor.compress(messageSetBytes, 0,
-			messageSetBuffer.position(), toSendBytes,
+		messageCompressedSize = compressor.compress(messageSetBuffer
+			.getBytes(), 0,
+			messageSetBuffer.getBuffer().position(), toSendBytes,
 			toSendBuffer.position() + 4);
 	    } catch (IOException e) {
 		LOG.error("Exception while compressing data.  (data lost).", e);
@@ -481,16 +535,17 @@ public class LowOverheadProducer {
 		    }
 		} else {
 		    LOG.error("Request failed. No more retries (data lost).", t);
-		    dropped.mark(batchSize);
-		    droppedTotal.mark(batchSize);
+		    dropped.mark(messageSetBuffer.getBatchSize());
+		    droppedTotal.mark(messageSetBuffer.getBatchSize());
 		}
 
 	    }
 	}
 
-	clearBuffers();
-	sent.mark(batchSize);
-	sentTotal.mark(batchSize);
+	toSendBuffer.clear();
+	messageSetBuffer.clear();
+	sent.mark(messageSetBuffer.getBatchSize());
+	sentTotal.mark(messageSetBuffer.getBatchSize());
 
 	// Periodic metadata refreshes.
 	if (topicMetadataRefreshIntervalMs >= 0
@@ -512,16 +567,22 @@ public class LowOverheadProducer {
 	return null;
     }
 
-    private void clearBuffers() {
-	messageSetBuffer.clear();
-	toSendBuffer.clear();
-    }
-
     public synchronized void close() {
 	LOG.info("Closing producer.");
-	if (messageSetBuffer.position() > 0) {
-	    sendMessage();
+	activeMessageSetBuffer = messageSetBuffers[activeBuffer];
+	activeByteBuffer = activeMessageSetBuffer.getBuffer();
+	if (activeByteBuffer.position() > 0) {
+	    try {
+		executor.submit(messageSetBuffers[activeBuffer]).get();
+	    } catch (InterruptedException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	    } catch (ExecutionException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	    }
 	}
+
 	closed = true;
     }
 
