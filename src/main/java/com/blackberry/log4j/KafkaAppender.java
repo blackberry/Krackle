@@ -10,10 +10,13 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.spi.LoggingEvent;
 
+import com.blackberry.kafka.lowoverhead.MetricRegistrySingleton;
 import com.blackberry.kafka.lowoverhead.producer.LowOverheadProducer;
 import com.blackberry.kafka.lowoverhead.producer.ProducerConfiguration;
+import com.codahale.metrics.MetricRegistry;
 
 public class KafkaAppender extends AppenderSkeleton {
+    private MetricRegistry metrics;
     private static final Charset UTF8 = Charset.forName("UTF8");
 
     private Logger logger;
@@ -51,6 +54,9 @@ public class KafkaAppender extends AppenderSkeleton {
 	    }
 	}
 
+	metrics = MetricRegistrySingleton.getInstance().getMetricsRegistry();
+	MetricRegistrySingleton.getInstance().enableJmx();
+
 	ProducerConfiguration conf = null;
 	try {
 	    conf = new ProducerConfiguration(props);
@@ -60,7 +66,8 @@ public class KafkaAppender extends AppenderSkeleton {
 	}
 
 	try {
-	    producer = new LowOverheadProducer(conf, clientId, topic, key, null);
+	    producer = new LowOverheadProducer(conf, clientId, topic, key,
+		    metrics);
 	} catch (Exception e) {
 	    logger.error("Error creating " + LowOverheadProducer.class
 		    + ".  Cannot log to Kafka.", e);
@@ -152,13 +159,12 @@ public class KafkaAppender extends AppenderSkeleton {
 		topicMetadataRefreshIntervalMs);
     }
 
-    public void setMetricsToConsole(String metricsToConsole) {
-	props.setProperty("metrics.to.console", metricsToConsole);
+    public void setQueueEnqueueTimeoutMs(String queueEnqueueTimeoutMs) {
+	props.setProperty("queue.enqueue.timeout.ms", queueEnqueueTimeoutMs);
     }
 
-    public void setMetricsToConsoleIntervalMs(String metricsToConsoleIntervalMs) {
-	props.setProperty("metrics.to.console.interval.ms",
-		metricsToConsoleIntervalMs);
+    public void setSendBufferBytes(String sendBufferBytes) {
+	props.setProperty("send.buffer.bytes", sendBufferBytes);
     }
 
 }
