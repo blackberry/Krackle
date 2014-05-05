@@ -14,19 +14,23 @@ public class ProducerConfiguration {
 
     protected static final int ONE_MB = 1024 * 1024;
 
+    // Options matching the producer client
     private List<String> metadataBrokerList;
-    private long queueBufferingMaxMs;
     private short requestRequiredAcks;
     private int requestTimeoutMs;
+    private String compressionCodec;
     private int messageSendMaxRetries;
     private int retryBackoffMs;
+    private long topicMetadataRefreshIntervalMs;
+    private long queueBufferingMaxMs;
+    private long queueEnqueueTimeoutMs;
+    private int sendBufferBytes;
+
+    // Client specific options
     private int messageBufferSize;
     private int sendBufferSize;
     private int responseBufferSize;
-    private String compressionCodec;
     private int compressionLevel;
-    private long topicMetadataRefreshIntervalMs;
-    private long queueEnqueueTimeoutMs;
 
     public ProducerConfiguration(Properties props) throws Exception {
 	LOG.info("Building configuration.");
@@ -152,6 +156,10 @@ public class ProducerConfiguration {
 		    "queue.enqueue.timeout.ms must either be -1 or a non-negative.");
 	}
 	LOG.info("queue.enqueue.timeout.ms = {}", queueEnqueueTimeoutMs);
+
+	sendBufferBytes = Integer.parseInt(props.getProperty(
+		"send.buffer.bytes", "" + (100 * 1024)));
+	LOG.info("send.buffer.bytes = {}", sendBufferBytes);
     }
 
     public List<String> getMetadataBrokerList() {

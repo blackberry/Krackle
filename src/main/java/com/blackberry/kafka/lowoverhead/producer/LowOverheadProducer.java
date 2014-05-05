@@ -254,6 +254,7 @@ public class LowOverheadProducer {
 
 	    try {
 		socket = new Socket(broker.getHost(), broker.getPort());
+		socket.setSendBufferSize(conf.getSendBufferSize());
 		LOG.info("Connected to {}", socket);
 		in = socket.getInputStream();
 		out = socket.getOutputStream();
