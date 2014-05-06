@@ -26,20 +26,18 @@ public class SnappyCompressor implements Compressor {
       int destPos) throws IOException {
     System.arraycopy(header, 0, dest, destPos, headerLength);
 
-    compressedLength = headerLength
-        + 4
-        + Snappy
-            .compress(src, srcPos, length, dest, destPos + headerLength + 4);
+    compressedLength = Snappy.compress(src, srcPos, length, dest, destPos
+        + headerLength + 4);
     writeInt(compressedLength, dest, destPos + headerLength);
 
-    return compressedLength;
+    return headerLength + 4 + compressedLength;
   }
 
   private void writeInt(int i, byte[] dest, int pos) {
     dest[pos] = (byte) (i >> 24);
-    dest[pos] = (byte) (i >> 16);
-    dest[pos] = (byte) (i >> 8);
-    dest[pos] = (byte) i;
+    dest[pos + 1] = (byte) (i >> 16);
+    dest[pos + 2] = (byte) (i >> 8);
+    dest[pos + 3] = (byte) i;
   }
 
 }

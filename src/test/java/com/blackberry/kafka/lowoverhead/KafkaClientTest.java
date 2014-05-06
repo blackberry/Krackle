@@ -224,11 +224,6 @@ public class KafkaClientTest {
   @Test
   public void testStdProducerLOConsumer() throws Throwable {
     for (String compression : COMPRESSION_METHODS) {
-      // For some reason, this doesn't work with Snappy. I haven't figured
-      // out why.
-      if ("snappy".equals(compression)) {
-        continue;
-      }
 
       final String topic = "std-loc-" + compression;
       setupTopic(topic);

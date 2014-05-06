@@ -37,6 +37,11 @@ public class MessageSetReader {
       buffer = ByteBuffer.wrap(bytes);
     }
 
+    System.err.println("src.length = " + src.length);
+    System.err.println("position = " + position);
+    System.err.println("length = " + length);
+    System.err.println("bytes.length = " + bytes.length);
+
     System.arraycopy(src, position, bytes, 0, length);
     buffer.clear();
     buffer.limit(length);
@@ -169,11 +174,10 @@ public class MessageSetReader {
     while (true) {
       decompressedSize = decompressor.decompress(bytes, buffer.position(),
           valueLength, decompressionBytes, 0, decompressionBytes.length);
-      if (decompressedSize == decompressionBytes.length) {
-        // we got back the maximum number of bytes we would accept. Most
-        // likely,
-        // this means there is more data that we can take. So increase
-        // our
+      if (decompressedSize == -1
+          || decompressedSize == decompressionBytes.length) {
+        // we got back the maximum number of bytes we would accept. Most likely,
+        // this means there is more data that we can take. So increase our
         // buffers and retry. This should be very rare.
         decompressionBytes = new byte[2 * decompressionBytes.length];
       } else {

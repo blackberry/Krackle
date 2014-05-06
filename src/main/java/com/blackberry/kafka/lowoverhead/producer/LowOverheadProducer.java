@@ -89,7 +89,10 @@ public class LowOverheadProducer {
   private short responseErrorCode;
   private int retry;
 
-  private CRC32 crc = new CRC32();
+  // We could be using crc in 2 separate blocks, which could cause corruption
+  // with one instance.
+  private CRC32 crcSendMessage = new CRC32();
+  private CRC32 crcSend = new CRC32();
 
   private MetaData metadata;
   private long lastMetadataRefresh;
@@ -291,8 +294,8 @@ public class LowOverheadProducer {
         if (sendFuture != null) {
           sendFuture.get();
         }
-        sendFuture = executor.submit(messageSetBuffers[activeBuffer]);
-        activeBuffer = (activeBuffer + 1) % 2;
+        sendFuture = executor.submit(activeMessageSetBuffer);
+        activeBuffer = (activeBuffer == 0 ? 1 : 0);
       }
       return;
     }
@@ -324,9 +327,9 @@ public class LowOverheadProducer {
           }
         }
       }
-      sendFuture = executor.submit(messageSetBuffers[activeBuffer]);
+      sendFuture = executor.submit(activeMessageSetBuffer);
 
-      activeBuffer = (activeBuffer + 1) % 2;
+      activeBuffer = (activeBuffer == 0 ? 1 : 0);
       activeMessageSetBuffer = messageSetBuffers[activeBuffer];
       activeByteBuffer = activeMessageSetBuffer.getBuffer();
     }
@@ -348,11 +351,11 @@ public class LowOverheadProducer {
     activeByteBuffer.putInt(length); // Value length
     activeByteBuffer.put(buffer, offset, length); // Value
 
-    crc.reset();
-    crc.update(messageSetBuffers[activeBuffer].getBytes(), crcPos + 4, length
+    crcSend.reset();
+    crcSend.update(activeMessageSetBuffer.getBytes(), crcPos + 4, length
         + keyLength + 10);
 
-    activeByteBuffer.putInt(crcPos, (int) crc.getValue());
+    activeByteBuffer.putInt(crcPos, (int) crcSend.getValue());
 
     activeMessageSetBuffer.incrementBatchSize();
   }
@@ -448,10 +451,10 @@ public class LowOverheadProducer {
           - (messageSizePos + 4));
 
       // Message CRC
-      crc.reset();
-      crc.update(toSendBytes, messageSizePos + 8, toSendBuffer.position()
+      crcSendMessage.reset();
+      crcSendMessage.update(toSendBytes, messageSizePos + 8, toSendBuffer.position()
           - (messageSizePos + 8));
-      toSendBuffer.putInt(messageSizePos + 4, (int) crc.getValue());
+      toSendBuffer.putInt(messageSizePos + 4, (int) crcSendMessage.getValue());
     }
 
     // Fill in the complete message size
