@@ -502,4 +502,8 @@ public class LowOverheadConsumer {
 	    }
 	}
     }
+
+    public long getNextOffset() {
+	return offset;
+    }
 }
