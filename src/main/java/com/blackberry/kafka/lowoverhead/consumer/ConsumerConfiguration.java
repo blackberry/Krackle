@@ -8,116 +8,113 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ConsumerConfiguration {
-    private static final Logger LOG = LoggerFactory
-	    .getLogger(ConsumerConfiguration.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ConsumerConfiguration.class);
 
-    private List<String> metadataBrokerList;
-    private int fetchMessageMaxBytes;
-    private int fetchWaitMaxMs;
-    private int fetchMinBytes;
-    private int socketReceiveBufferBytes;
-    private String autoOffsetReset;
+  private List<String> metadataBrokerList;
+  private int fetchMessageMaxBytes;
+  private int fetchWaitMaxMs;
+  private int fetchMinBytes;
+  private int socketReceiveBufferBytes;
+  private String autoOffsetReset;
 
-    public ConsumerConfiguration(Properties props) throws Exception {
-	LOG.info("Building configuration.");
+  public ConsumerConfiguration(Properties props) throws Exception {
+    LOG.info("Building configuration.");
 
-	metadataBrokerList = new ArrayList<String>();
-	String metadataBrokerListString = props
-		.getProperty("metadata.broker.list");
-	if (metadataBrokerListString == null
-		|| metadataBrokerListString.isEmpty()) {
-	    throw new Exception("metadata.broker.list cannot be empty.");
-	}
-	for (String s : metadataBrokerListString.split(",")) {
-	    // This is not a good regex. Could make it better.
-	    if (s.matches("^[\\.a-zA-Z0-9-]*:\\d+$")) {
-		metadataBrokerList.add(s);
-	    } else {
-		throw new Exception(
-			"metata.broker.list must contain a list of hosts and ports (localhost:123,192.168.1.1:456).  Got "
-				+ metadataBrokerListString);
-	    }
-	}
-	LOG.info("metadata.broker.list = {}", metadataBrokerList);
-
-	fetchMessageMaxBytes = Integer.parseInt(props.getProperty(
-		"fetch.message.max.bytes", "" + (1024 * 1024)));
-	if (fetchMessageMaxBytes <= 0) {
-	    throw new Exception("fetch.message.max.bytes must be positive.");
-	}
-	LOG.info("fetch.message.max.bytes = {}", fetchMessageMaxBytes);
-
-	fetchWaitMaxMs = Integer.parseInt(props.getProperty(
-		"fetch.wait.max.ms", "100"));
-	if (fetchWaitMaxMs < 0) {
-	    throw new Exception("fetch.wait.max.ms cannot be negative.");
-	}
-	LOG.info("fetch.wait.max.ms = {}", fetchWaitMaxMs);
-
-	fetchMinBytes = Integer.parseInt(props.getProperty("fetch.min.bytes",
-		"1"));
-	if (fetchMinBytes < 0) {
-	    throw new Exception("fetch.min.bytes cannot be negative.");
-	}
-	LOG.info("fetch.min.bytes = {}", fetchMinBytes);
-
-	socketReceiveBufferBytes = Integer.parseInt(props.getProperty(
-		"socket.receive.buffer.bytes", "" + (64 * 1024)));
-	if (socketReceiveBufferBytes < 0) {
-	    throw new Exception("socket.receive.buffer.bytes must be positive.");
-	}
-	LOG.info("socket.receive.buffer.bytes = {}", socketReceiveBufferBytes);
-
-	autoOffsetReset = props.getProperty("auto.offset.reset", "largest");
-	LOG.info("auto.offset.reset = {}", autoOffsetReset);
+    metadataBrokerList = new ArrayList<String>();
+    String metadataBrokerListString = props.getProperty("metadata.broker.list");
+    if (metadataBrokerListString == null || metadataBrokerListString.isEmpty()) {
+      throw new Exception("metadata.broker.list cannot be empty.");
     }
-
-    public List<String> getMetadataBrokerList() {
-	return metadataBrokerList;
+    for (String s : metadataBrokerListString.split(",")) {
+      // This is not a good regex. Could make it better.
+      if (s.matches("^[\\.a-zA-Z0-9-]*:\\d+$")) {
+        metadataBrokerList.add(s);
+      } else {
+        throw new Exception(
+            "metata.broker.list must contain a list of hosts and ports (localhost:123,192.168.1.1:456).  Got "
+                + metadataBrokerListString);
+      }
     }
+    LOG.info("metadata.broker.list = {}", metadataBrokerList);
 
-    public void setMetadataBrokerList(List<String> metadataBrokerList) {
-	this.metadataBrokerList = metadataBrokerList;
+    fetchMessageMaxBytes = Integer.parseInt(props.getProperty(
+        "fetch.message.max.bytes", "" + (1024 * 1024)));
+    if (fetchMessageMaxBytes <= 0) {
+      throw new Exception("fetch.message.max.bytes must be positive.");
     }
+    LOG.info("fetch.message.max.bytes = {}", fetchMessageMaxBytes);
 
-    public int getFetchMessageMaxBytes() {
-	return fetchMessageMaxBytes;
+    fetchWaitMaxMs = Integer.parseInt(props.getProperty("fetch.wait.max.ms",
+        "100"));
+    if (fetchWaitMaxMs < 0) {
+      throw new Exception("fetch.wait.max.ms cannot be negative.");
     }
+    LOG.info("fetch.wait.max.ms = {}", fetchWaitMaxMs);
 
-    public void setFetchMessageMaxBytes(int fetchMessageMaxBytes) {
-	this.fetchMessageMaxBytes = fetchMessageMaxBytes;
+    fetchMinBytes = Integer.parseInt(props.getProperty("fetch.min.bytes", "1"));
+    if (fetchMinBytes < 0) {
+      throw new Exception("fetch.min.bytes cannot be negative.");
     }
+    LOG.info("fetch.min.bytes = {}", fetchMinBytes);
 
-    public int getFetchWaitMaxMs() {
-	return fetchWaitMaxMs;
+    socketReceiveBufferBytes = Integer.parseInt(props.getProperty(
+        "socket.receive.buffer.bytes", "" + (64 * 1024)));
+    if (socketReceiveBufferBytes < 0) {
+      throw new Exception("socket.receive.buffer.bytes must be positive.");
     }
+    LOG.info("socket.receive.buffer.bytes = {}", socketReceiveBufferBytes);
 
-    public void setFetchWaitMaxMs(int fetchWaitMaxMs) {
-	this.fetchWaitMaxMs = fetchWaitMaxMs;
-    }
+    autoOffsetReset = props.getProperty("auto.offset.reset", "largest");
+    LOG.info("auto.offset.reset = {}", autoOffsetReset);
+  }
 
-    public int getFetchMinBytes() {
-	return fetchMinBytes;
-    }
+  public List<String> getMetadataBrokerList() {
+    return metadataBrokerList;
+  }
 
-    public void setFetchMinBytes(int fetchMinBytes) {
-	this.fetchMinBytes = fetchMinBytes;
-    }
+  public void setMetadataBrokerList(List<String> metadataBrokerList) {
+    this.metadataBrokerList = metadataBrokerList;
+  }
 
-    public int getSocketReceiveBufferBytes() {
-	return socketReceiveBufferBytes;
-    }
+  public int getFetchMessageMaxBytes() {
+    return fetchMessageMaxBytes;
+  }
 
-    public void setSocketReceiveBufferBytes(int socketReceiveBufferBytes) {
-	this.socketReceiveBufferBytes = socketReceiveBufferBytes;
-    }
+  public void setFetchMessageMaxBytes(int fetchMessageMaxBytes) {
+    this.fetchMessageMaxBytes = fetchMessageMaxBytes;
+  }
 
-    public String getAutoOffsetReset() {
-	return autoOffsetReset;
-    }
+  public int getFetchWaitMaxMs() {
+    return fetchWaitMaxMs;
+  }
 
-    public void setAutoOffsetReset(String autoOffsetReset) {
-	this.autoOffsetReset = autoOffsetReset;
-    }
+  public void setFetchWaitMaxMs(int fetchWaitMaxMs) {
+    this.fetchWaitMaxMs = fetchWaitMaxMs;
+  }
+
+  public int getFetchMinBytes() {
+    return fetchMinBytes;
+  }
+
+  public void setFetchMinBytes(int fetchMinBytes) {
+    this.fetchMinBytes = fetchMinBytes;
+  }
+
+  public int getSocketReceiveBufferBytes() {
+    return socketReceiveBufferBytes;
+  }
+
+  public void setSocketReceiveBufferBytes(int socketReceiveBufferBytes) {
+    this.socketReceiveBufferBytes = socketReceiveBufferBytes;
+  }
+
+  public String getAutoOffsetReset() {
+    return autoOffsetReset;
+  }
+
+  public void setAutoOffsetReset(String autoOffsetReset) {
+    this.autoOffsetReset = autoOffsetReset;
+  }
 
 }
