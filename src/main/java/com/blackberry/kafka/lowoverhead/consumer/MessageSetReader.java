@@ -37,11 +37,6 @@ public class MessageSetReader {
       buffer = ByteBuffer.wrap(bytes);
     }
 
-    System.err.println("src.length = " + src.length);
-    System.err.println("position = " + position);
-    System.err.println("length = " + length);
-    System.err.println("bytes.length = " + bytes.length);
-
     System.arraycopy(src, position, bytes, 0, length);
     buffer.clear();
     buffer.limit(length);
