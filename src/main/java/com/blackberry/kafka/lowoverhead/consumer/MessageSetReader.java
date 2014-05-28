@@ -62,6 +62,7 @@ public class MessageSetReader {
   public int getMessage(byte[] dest, int pos, int maxLength) throws IOException {
     if (messageSetReader != null && messageSetReader.isReady()) {
       bytesCopied = messageSetReader.getMessage(dest, pos, maxLength);
+      offset = messageSetReader.getOffset();
       if (!messageSetReader.isReady() && !buffer.hasRemaining()) {
         ready = false;
       } else {
@@ -69,8 +70,7 @@ public class MessageSetReader {
       }
     } else {
       // There are occasional truncated messages. If we don't have enough,
-      // then
-      // return -1 and go not-ready
+      // then return -1 and go not-ready
       // This will cover the offset, message size and crc
       if (buffer.remaining() < 8 + 4) {
         ready = false;
