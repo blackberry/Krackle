@@ -6,12 +6,6 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +39,7 @@ public class LowOverheadConsumer {
   private MessageSetReader messageSetReader = new MessageSetReader();
 
   private long offset;
+  private long lastOffset;
 
   private byte[] offsetRequestBytes;
   private ByteBuffer offsetRequestBuffer;
@@ -133,54 +128,28 @@ public class LowOverheadConsumer {
 
   private int bytesReturned = 0;
 
-  private ExecutorService getMessageTimeoutExecutor = Executors
-      .newSingleThreadExecutor();
-
-  private class GetMessageCallable implements Callable<Integer> {
-    private byte[] buffer;
-    private int pos;
-    private int maxLength;
-
-    @Override
-    public Integer call() throws Exception {
-      return getMessage(buffer, pos, maxLength);
-    }
-  }
-
-  private GetMessageCallable getMessageCallable = new GetMessageCallable();
-  private Future<Integer> getMessageFuture;
-
-  // Get with timeout
-  public int getMessage(byte[] buffer, int pos, int maxLength, long timeout,
-      TimeUnit unit) throws IOException {
-    getMessageCallable.buffer = buffer;
-    getMessageCallable.pos = pos;
-    getMessageCallable.maxLength = maxLength;
-    getMessageFuture = getMessageTimeoutExecutor.submit(getMessageCallable);
-    try {
-      return getMessageFuture.get(timeout, unit);
-    } catch (TimeoutException e) {
-      return -1;
-    } catch (Exception e) {
-      throw new IOException("Error getting message with timeout.", e);
-    }
-  }
-
   // Wait forever.
   public int getMessage(byte[] buffer, int pos, int maxLength)
       throws IOException {
-    // Check for a -1 return value that indicates a bad read, and restart.
-    bytesReturned = -1;
-    while (bytesReturned == -1) {
-      while (messageSetReader == null || messageSetReader.isReady() == false) {
-        readFromBroker();
-      }
+    if (messageSetReader == null || messageSetReader.isReady() == false) {
+      readFromBroker();
 
-      bytesReturned = messageSetReader.getMessage(buffer, pos, maxLength);
+      if (messageSetReader == null || messageSetReader.isReady() == false) {
+        return -1;
+      }
     }
 
-    offset = messageSetReader.getNextOffset();
+    bytesReturned = messageSetReader.getMessage(buffer, pos, maxLength);
 
+    if (bytesReturned == -1) {
+      return -1;
+    }
+
+    // LOG.info("Read message at offset {} ({} bytes)",
+    // messageSetReader.getOffset(), bytesReturned);
+
+    lastOffset = messageSetReader.getOffset();
+    offset = messageSetReader.getNextOffset();
     incrementMetrics(1, bytesReturned);
 
     return bytesReturned;
@@ -533,6 +502,10 @@ public class LowOverheadConsumer {
         }
       }
     }
+  }
+
+  public long getLastOffset() {
+    return lastOffset;
   }
 
   public long getNextOffset() {

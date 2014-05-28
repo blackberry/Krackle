@@ -143,6 +143,7 @@ public class MessageSetReader {
         messageSetReader.init(decompressionBytes, 0, decompressedSize);
         if (messageSetReader.isReady()) {
           bytesCopied = messageSetReader.getMessage(dest, pos, maxLength);
+          offset = messageSetReader.getOffset();
         }
       } else if (compression == Constants.GZIP) {
         decompressedSize = decompress(getGzipDecompressor());
@@ -150,6 +151,7 @@ public class MessageSetReader {
         messageSetReader.init(decompressionBytes, 0, decompressedSize);
         if (messageSetReader.isReady()) {
           bytesCopied = messageSetReader.getMessage(dest, pos, maxLength);
+          offset = messageSetReader.getOffset();
         }
       }
 

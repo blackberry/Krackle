@@ -240,7 +240,10 @@ public class KafkaClientTest {
             String message;
             int messageLength;
             for (int i = 0; i < logs.size(); i++) {
-              messageLength = consumer.getMessage(bytes, 0, bytes.length);
+              messageLength = -1;
+              while (messageLength == -1) {
+                messageLength = consumer.getMessage(bytes, 0, bytes.length);
+              }
               line = new String(bytes, 0, messageLength);
               message = line.split(" ", 4)[3].trim();
               assertEquals(logs.get(i), message);
@@ -287,7 +290,10 @@ public class KafkaClientTest {
             String message;
             int messageLength;
             for (int i = 0; i < logs.size(); i++) {
-              messageLength = consumer.getMessage(bytes, 0, bytes.length);
+              messageLength = -1;
+              while (messageLength == -1) {
+                messageLength = consumer.getMessage(bytes, 0, bytes.length);
+              }
               line = new String(bytes, 0, messageLength);
               message = line.split(" ", 4)[3].trim();
               assertEquals(logs.get(i), message);
