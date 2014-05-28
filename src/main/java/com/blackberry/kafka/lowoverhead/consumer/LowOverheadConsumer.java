@@ -470,8 +470,7 @@ public class LowOverheadConsumer {
       // We can skip a bunch of stuff here.
       // There is 1 topic (4 bytes), then the topic name (2 + topicLength
       // bytes), then the number of partitions (which is 1) (4 bytes),
-      // then the
-      // partition id (4 bytes)
+      // then the partition id (4 bytes)
       responseBuffer.position(responseBuffer.position() + 4 + 2 + topicLength
           + 4 + 4);
 

@@ -452,8 +452,8 @@ public class LowOverheadProducer {
 
       // Message CRC
       crcSendMessage.reset();
-      crcSendMessage.update(toSendBytes, messageSizePos + 8, toSendBuffer.position()
-          - (messageSizePos + 8));
+      crcSendMessage.update(toSendBytes, messageSizePos + 8,
+          toSendBuffer.position() - (messageSizePos + 8));
       toSendBuffer.putInt(messageSizePos + 4, (int) crcSendMessage.getValue());
     }
 
