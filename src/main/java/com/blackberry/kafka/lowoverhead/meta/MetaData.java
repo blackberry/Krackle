@@ -130,8 +130,8 @@ public class MetaData {
           short partError = responseBuffer.getShort();
           int partId = responseBuffer.getInt();
           int leader = responseBuffer.getInt();
-          LOG.debug("    Partition ID={}, Leader={} (Error={})", leader,
-              partId, partError);
+          LOG.debug("    Partition ID={}, Leader={} (Error={})", partId,
+              leader, partError);
 
           Partition part = new Partition(partId);
           part.setLeader(leader);
