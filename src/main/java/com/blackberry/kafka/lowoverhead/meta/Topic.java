@@ -19,7 +19,12 @@ public class Topic {
   }
 
   public Partition getPartition(int i) {
-    return partitions.get(i);
+    for (Partition p : partitions) {
+      if (p.getPartId() == i) {
+        return p;
+      }
+    }
+    return null;
   }
 
   public String getName() {
