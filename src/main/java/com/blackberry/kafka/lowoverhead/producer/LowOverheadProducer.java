@@ -194,6 +194,7 @@ public class LowOverheadProducer {
     loader = new Loader();
     loaderThread = new Thread(loader);
     loaderThread.setDaemon(false);
+    loaderThread.setName("Loader");
     loaderThread.start();
     // Wait for the loader thread to get the lock before we start the sender
     // thread.
@@ -203,6 +204,7 @@ public class LowOverheadProducer {
     sender = new Sender();
     senderThread = new Thread(sender);
     senderThread.setDaemon(false);
+    senderThread.setName("Sender");
     senderThread.start();
   }
 
@@ -381,7 +383,7 @@ public class LowOverheadProducer {
     nextLoadingBuffer = loadingBuffer + 1;
     nextLoadingBuffer %= numBuffers;
 
-    LOG.info("Incrementing loading buffer from {} to {}", loadingBuffer,
+    LOG.debug("Incrementing loading buffer from {} to {}", loadingBuffer,
         nextLoadingBuffer);
 
     if (conf.getQueueEnqueueTimeoutMs() == -1) {
@@ -397,7 +399,7 @@ public class LowOverheadProducer {
       }
     }
 
-    LOG.info("Got lock on buffer {} ({})", nextLoadingBuffer,
+    LOG.trace("Got lock on buffer {} ({})", nextLoadingBuffer,
         incrementLoadingBufferResult);
 
     if (incrementLoadingBufferResult == true) {
