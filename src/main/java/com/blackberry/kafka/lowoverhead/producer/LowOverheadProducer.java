@@ -403,13 +403,13 @@ public class LowOverheadProducer {
         incrementLoadingBufferResult);
 
     if (incrementLoadingBufferResult == true) {
-      LOG.info("Unlocking buffer {}", loadingBuffer);
+      LOG.debug("Unlocking buffer {}", loadingBuffer);
       try {
         messageSetBufferLocks[loadingBuffer].unlock();
       } catch (IllegalMonitorStateException e) {
         LOG.error("Error releasing lock.", e);
       }
-      LOG.info("Unlocked buffer {}", loadingBuffer);
+      LOG.debug("Unlocked buffer {}", loadingBuffer);
       loadingBuffer = nextLoadingBuffer;
     }
 
@@ -704,7 +704,7 @@ public class LowOverheadProducer {
     @Override
     public void run() {
       while (true) {
-        LOG.info("Sender waiting for lock on {}", sendingBuffer);
+        LOG.debug("Sender waiting for lock on {}", sendingBuffer);
         if (closed) {
           if (messageSetBufferLocks[sendingBuffer].tryLock() == false) {
             break;
@@ -713,7 +713,7 @@ public class LowOverheadProducer {
           messageSetBufferLocks[sendingBuffer].lock();
         }
 
-        LOG.info("Sending buffer {}", sendingBuffer);
+        LOG.debug("Sending buffer {}", sendingBuffer);
 
         if (messageSetBuffers[sendingBuffer].getBatchSize() > 0) {
           sendMessage(messageSetBuffers[sendingBuffer]);
@@ -721,7 +721,7 @@ public class LowOverheadProducer {
         messageSetBuffers[sendingBuffer].clear();
 
         messageSetBufferLocks[sendingBuffer].unlock();
-        LOG.info("Done sending buffer {}", sendingBuffer);
+        LOG.debug("Done sending buffer {}", sendingBuffer);
 
         sendingBuffer++;
         sendingBuffer %= numBuffers;
