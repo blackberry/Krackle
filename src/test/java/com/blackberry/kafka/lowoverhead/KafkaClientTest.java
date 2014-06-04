@@ -104,6 +104,7 @@ public class KafkaClientTest {
     producerProps.setProperty("compression.code", compression);
     producerProps.setProperty("queue.buffering.max.ms", "100");
     producerProps.setProperty("queue.enqueue.timeout.ms", "-1");
+    producerProps.setProperty("num.buffers", "10");
     ProducerConfiguration producerConf = new ProducerConfiguration(
         producerProps);
     LowOverheadProducer producer = new LowOverheadProducer(producerConf,

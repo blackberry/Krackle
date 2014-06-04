@@ -24,10 +24,10 @@ public class ProducerConfiguration {
   private long topicMetadataRefreshIntervalMs;
   private long queueBufferingMaxMs;
   private long queueEnqueueTimeoutMs;
-  private int sendBufferBytes;
 
   // Client specific options
   private int messageBufferSize;
+  private int numBuffers;
   private int sendBufferSize;
   private int responseBufferSize;
   private int compressionLevel;
@@ -105,6 +105,12 @@ public class ProducerConfiguration {
     }
     LOG.info("message.buffer.size = {}", messageBufferSize);
 
+    numBuffers = Integer.parseInt(props.getProperty("num.buffers", "2"));
+    if (numBuffers < 2) {
+      throw new Exception("num.buffers must be at least 2.  Got " + numBuffers);
+    }
+    LOG.info("num.buffers = {}", numBuffers);
+
     sendBufferSize = Integer.parseInt(props.getProperty("send.buffer.size", ""
         + (messageBufferSize + 200)));
     if (sendBufferSize < 1) {
@@ -150,9 +156,6 @@ public class ProducerConfiguration {
     }
     LOG.info("queue.enqueue.timeout.ms = {}", queueEnqueueTimeoutMs);
 
-    sendBufferBytes = Integer.parseInt(props.getProperty("send.buffer.bytes",
-        "" + (100 * 1024)));
-    LOG.info("send.buffer.bytes = {}", sendBufferBytes);
   }
 
   public List<String> getMetadataBrokerList() {
@@ -209,6 +212,14 @@ public class ProducerConfiguration {
 
   public void setMessageBufferSize(int messageBufferSize) {
     this.messageBufferSize = messageBufferSize;
+  }
+
+  public int getNumBuffers() {
+    return numBuffers;
+  }
+
+  public void setNumBuffers(int numBuffers) {
+    this.numBuffers = numBuffers;
   }
 
   public int getSendBufferSize() {
