@@ -6,11 +6,11 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.zip.CRC32;
 
 import org.slf4j.Logger;
@@ -57,10 +57,8 @@ public class LowOverheadProducer {
 
   // Store the uncompressed message set that we will be compressing later.
   private int numBuffers;
-  private int loadingBuffer = 0;
-  private int sendingBuffer = 0;
-  private MessageSetBuffer[] messageSetBuffers;
-  private ReentrantLock[] messageSetBufferLocks;
+  private BlockingQueue<MessageSetBuffer> freeBuffers;
+  private BlockingQueue<MessageSetBuffer> buffersToSend;
 
   // Store the compressed message + headers.
   // Generally, this needs to be bigger than the messageSetBufferSize
@@ -106,10 +104,6 @@ public class LowOverheadProducer {
 
   private Sender sender;
   private Thread senderThread;
-  private Loader loader;
-  private Thread loaderThread;
-  private SynchronousQueue<BytesAndPosition> loaderQueue = new SynchronousQueue<BytesAndPosition>();
-  private SynchronousQueue<Object> loaderResponseQueue = new SynchronousQueue<Object>();
 
   private boolean closed = false;
 
@@ -190,21 +184,11 @@ public class LowOverheadProducer {
       metadata = null;
     }
 
-    // Start the loader thread
-    loader = new Loader();
-    loaderThread = new Thread(loader);
-    loaderThread.setDaemon(false);
-    loaderThread.setName("Loader");
-    loaderThread.start();
-    // Wait for the loader thread to get the lock before we start the sender
-    // thread.
-    loaderResponseQueue.take();
-
     // Start the send thread
     sender = new Sender();
     senderThread = new Thread(sender);
     senderThread.setDaemon(false);
-    senderThread.setName("Sender");
+    senderThread.setName("Sender-Thread");
     senderThread.start();
   }
 
@@ -223,11 +207,10 @@ public class LowOverheadProducer {
 
     int messageBufferSize = conf.getMessageBufferSize();
     numBuffers = conf.getNumBuffers();
-    messageSetBuffers = new MessageSetBuffer[numBuffers];
-    messageSetBufferLocks = new ReentrantLock[numBuffers];
+    freeBuffers = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
+    buffersToSend = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
     for (int i = 0; i < numBuffers; i++) {
-      messageSetBuffers[i] = new MessageSetBuffer(this, messageBufferSize);
-      messageSetBufferLocks[i] = new ReentrantLock();
+      freeBuffers.add(new MessageSetBuffer(this, messageBufferSize));
     }
 
     toSendBytes = new byte[sendBufferSize];
@@ -295,9 +278,8 @@ public class LowOverheadProducer {
 
   private int crcPos;
 
-  private MessageSetBuffer activeMessageSetBuffer;
+  private MessageSetBuffer activeMessageSetBuffer = null;
   private ByteBuffer activeByteBuffer;
-  private BytesAndPosition bap = new BytesAndPosition();
 
   // Add a message to the send queue. Takes bytes from buffer from start, up
   // to length bytes.
@@ -308,26 +290,25 @@ public class LowOverheadProducer {
       return;
     }
 
-    bap.setBytes(buffer);
-    bap.setPos(offset);
-    bap.setLength(length);
+    if (activeMessageSetBuffer == null) {
+      if (conf.getQueueEnqueueTimeoutMs() == -1) {
+        activeMessageSetBuffer = freeBuffers.take();
+      } else {
+        activeMessageSetBuffer = freeBuffers.poll(
+            conf.getQueueEnqueueTimeoutMs(), TimeUnit.MILLISECONDS);
+      }
 
-    loaderQueue.put(bap);
-    loaderResponseQueue.take();
-  }
-
-  private void doSend(byte[] buffer, int offset, int length) {
-    activeMessageSetBuffer = messageSetBuffers[loadingBuffer];
-    activeByteBuffer = activeMessageSetBuffer.getBuffer();
+      if (activeMessageSetBuffer == null) {
+        LOG.info("Buffer full.  Dropping message.");
+        return;
+      }
+    }
 
     // null buffer means send what we have
     if (buffer == null) {
       if (activeMessageSetBuffer.getBatchSize() > 0) {
-        if (incrementLoadingBuffer()) {
-          // Do nothing on success
-        } else {
-          LOG.info("Buffer full.  Dropping message.");
-        }
+        buffersToSend.put(activeMessageSetBuffer);
+        activeMessageSetBuffer = null;
       }
       return;
     }
@@ -337,14 +318,22 @@ public class LowOverheadProducer {
 
     if (activeMessageSetBuffer.getBuffer().remaining() < length + keyLength
         + 26) {
-      if (incrementLoadingBuffer()) {
-        // Do nothing on success
+      buffersToSend.put(activeMessageSetBuffer);
+      activeMessageSetBuffer = null;
+
+      if (conf.getQueueEnqueueTimeoutMs() == -1) {
+        activeMessageSetBuffer = freeBuffers.take();
       } else {
+        activeMessageSetBuffer = freeBuffers.poll(
+            conf.getQueueEnqueueTimeoutMs(), TimeUnit.MILLISECONDS);
+      }
+
+      if (activeMessageSetBuffer == null) {
         LOG.info("Buffer full.  Dropping message.");
         return;
       }
     }
-    activeMessageSetBuffer = messageSetBuffers[loadingBuffer];
+
     activeByteBuffer = activeMessageSetBuffer.getBuffer();
 
     // LOG.info("Received: {}", new String(buffer, offset, length, UTF8));
@@ -378,43 +367,6 @@ public class LowOverheadProducer {
 
   int nextLoadingBuffer;
   boolean incrementLoadingBufferResult;
-
-  private boolean incrementLoadingBuffer() {
-    nextLoadingBuffer = loadingBuffer + 1;
-    nextLoadingBuffer %= numBuffers;
-
-    LOG.debug("Incrementing loading buffer from {} to {}", loadingBuffer,
-        nextLoadingBuffer);
-
-    if (conf.getQueueEnqueueTimeoutMs() == -1) {
-      messageSetBufferLocks[nextLoadingBuffer].lock();
-      incrementLoadingBufferResult = true;
-    } else {
-      try {
-        incrementLoadingBufferResult = messageSetBufferLocks[nextLoadingBuffer]
-            .tryLock(conf.getQueueEnqueueTimeoutMs(), TimeUnit.MILLISECONDS);
-      } catch (InterruptedException e) {
-        LOG.error("Error getting lock on next buffer.", e);
-        incrementLoadingBufferResult = false;
-      }
-    }
-
-    LOG.trace("Got lock on buffer {} ({})", nextLoadingBuffer,
-        incrementLoadingBufferResult);
-
-    if (incrementLoadingBufferResult == true) {
-      LOG.debug("Unlocking buffer {}", loadingBuffer);
-      try {
-        messageSetBufferLocks[loadingBuffer].unlock();
-      } catch (IllegalMonitorStateException e) {
-        LOG.error("Error releasing lock.", e);
-      }
-      LOG.debug("Unlocked buffer {}", loadingBuffer);
-      loadingBuffer = nextLoadingBuffer;
-    }
-
-    return incrementLoadingBufferResult;
-  }
 
   // Send accumulated messages
   protected void sendMessage(MessageSetBuffer messageSetBuffer) {
@@ -616,115 +568,47 @@ public class LowOverheadProducer {
 
   public synchronized void close() {
     LOG.info("Closing producer.");
-    incrementLoadingBuffer();
-
     closed = true;
+
+    buffersToSend.add(activeMessageSetBuffer);
+    activeMessageSetBuffer = null;
+
     try {
       senderThread.join();
-      loaderThread.join();
     } catch (InterruptedException e) {
       LOG.error("Error shutting down sender and loader threads.", e);
     }
   }
 
-  private class BytesAndPosition {
-    private byte[] bytes;
-    private int pos;
-    private int length;
-
-    public byte[] getBytes() {
-      return bytes;
-    }
-
-    public void setBytes(byte[] bytes) {
-      this.bytes = bytes;
-    }
-
-    public int getPos() {
-      return pos;
-    }
-
-    public void setPos(int pos) {
-      this.pos = pos;
-    }
-
-    public int getLength() {
-      return length;
-    }
-
-    public void setLength(int length) {
-      this.length = length;
-    }
-  }
-
-  private class Loader implements Runnable {
-    private BytesAndPosition pos;
-    private Object responseObject = new Object();
-
-    @Override
-    public void run() {
-      messageSetBufferLocks[loadingBuffer].lock();
-      try {
-        loaderResponseQueue.put(responseObject);
-      } catch (InterruptedException e) {
-        LOG.error("Error responding to send request", e);
-      }
-
-      while (true) {
-        if (closed) {
-          break;
-        }
-
-        try {
-          pos = loaderQueue.poll(100, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-          LOG.error("Interrupted polling for new messages.", e);
-          continue;
-        }
-
-        if (pos == null) {
-          continue;
-        }
-
-        doSend(pos.getBytes(), pos.getPos(), pos.getLength());
-
-        try {
-          loaderResponseQueue.put(responseObject);
-        } catch (InterruptedException e) {
-          LOG.error("Error responding to send request", e);
-        }
-
-      }
-    }
-
-  }
-
   private class Sender implements Runnable {
+    private MessageSetBuffer buffer;
 
     @Override
     public void run() {
       while (true) {
-        LOG.debug("Sender waiting for lock on {}", sendingBuffer);
-        if (closed) {
-          if (messageSetBufferLocks[sendingBuffer].tryLock() == false) {
+        try {
+          if (closed && buffersToSend.isEmpty()) {
             break;
           }
-        } else {
-          messageSetBufferLocks[sendingBuffer].lock();
+
+          try {
+            buffer = buffersToSend.poll(1, TimeUnit.SECONDS);
+          } catch (InterruptedException e) {
+            LOG.error("Interrupted polling for a new buffer.", e);
+            continue;
+          }
+          if (buffer == null) {
+            continue;
+          }
+
+          sendMessage(buffer);
+
+          buffer.clear();
+          freeBuffers.add(buffer);
+
+        } catch (Throwable t) {
+          LOG.error("Unexpected error", t);
         }
-
-        LOG.debug("Sending buffer {}", sendingBuffer);
-
-        if (messageSetBuffers[sendingBuffer].getBatchSize() > 0) {
-          sendMessage(messageSetBuffers[sendingBuffer]);
-        }
-        messageSetBuffers[sendingBuffer].clear();
-
-        messageSetBufferLocks[sendingBuffer].unlock();
-        LOG.debug("Done sending buffer {}", sendingBuffer);
-
-        sendingBuffer++;
-        sendingBuffer %= numBuffers;
       }
     }
 
