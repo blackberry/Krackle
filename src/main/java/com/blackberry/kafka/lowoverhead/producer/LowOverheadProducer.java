@@ -456,6 +456,12 @@ public class LowOverheadProducer {
         messageCompressedSize = compressor.compress(
             messageSetBuffer.getBytes(), 0, messageSetBuffer.getBuffer()
                 .position(), toSendBytes, toSendBuffer.position() + 4);
+
+        if (messageCompressedSize == -1) {
+          // toSendBytes is too small to hold the compressed data
+          throw new IOException(
+              "Not enough room in the send buffer for the compressed data.");
+        }
       } catch (IOException e) {
         LOG.error("Exception while compressing data.  (data lost).", e);
         return;

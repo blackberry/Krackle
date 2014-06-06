@@ -24,6 +24,9 @@ import java.util.zip.Deflater;
 
 import com.blackberry.kafka.lowoverhead.Constants;
 
+/**
+ * Compressor implementation that used the GZIP algorithm.
+ */
 public class GzipCompressor implements Compressor {
   private static final byte[] HEADER_BYTES = new byte[] //
   { (byte) 0x1f, (byte) 0x8b, // Magic number
@@ -37,11 +40,25 @@ public class GzipCompressor implements Compressor {
   private final CRC32 crc;
   private final ByteBuffer bb;
   private int compressedSize;
+  private int maxOutputSize;
+  private int deflaterOutputSize;
+  private byte[] testBytes = new byte[1];
 
+  /**
+   * New instance with default compression level.
+   */
   public GzipCompressor() {
     this(Deflater.DEFAULT_COMPRESSION);
   }
 
+  /**
+   * New instance with the given compression level
+   *
+   * @param compressionLevel
+   *          requested compression level. Valid values are <code>-1</code>
+   *          (default compression), <code>0</code> (no compression),
+   *          <code>1-9</code>.
+   */
   public GzipCompressor(int compressionLevel) {
     deflater = new Deflater(compressionLevel, true);
     crc = new CRC32();
@@ -63,8 +80,22 @@ public class GzipCompressor implements Compressor {
     deflater.reset();
     deflater.setInput(src, srcPos, length);
     deflater.finish();
-    compressedSize += deflater.deflate(dest, destPos + compressedSize,
-        dest.length - destPos - compressedSize);
+
+    // The output can't exceed the bytes we have to work with, less 10 bytes for
+    // headers and 8 bytes for footers.
+    maxOutputSize = dest.length - destPos - 10 - 8;
+    deflaterOutputSize = deflater.deflate(dest, destPos + compressedSize,
+        maxOutputSize);
+    if (deflaterOutputSize == maxOutputSize) {
+      // We just filled the output buffer! Either we have more to decompress, or
+      // we don't. If we do, then that's an error. If we don't then that's fine.
+      // So let's check.
+      if (deflater.deflate(testBytes, 0, 1) == 1) {
+        // We couldn't fit everything in the output buffer.
+        return -1;
+      }
+    }
+    compressedSize += deflaterOutputSize;
 
     crc.reset();
     crc.update(src, srcPos, length);

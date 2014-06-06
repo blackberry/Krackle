@@ -22,6 +22,9 @@ import org.xerial.snappy.Snappy;
 
 import com.blackberry.kafka.lowoverhead.Constants;
 
+/**
+ * Compressor implementation that used the Snappy algorithm.
+ */
 public class SnappyCompressor implements Compressor {
   private final static byte[] header = new byte[] { //
   -126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, // Magic number
@@ -31,6 +34,7 @@ public class SnappyCompressor implements Compressor {
   private final static int headerLength = header.length;
 
   private int compressedLength;
+  private int maxCompressedSize;
 
   @Override
   public byte getAttribute() {
@@ -41,6 +45,12 @@ public class SnappyCompressor implements Compressor {
   public int compress(byte[] src, int srcPos, int length, byte[] dest,
       int destPos) throws IOException {
     System.arraycopy(header, 0, dest, destPos, headerLength);
+
+    // Compressed size cannot be greater than what we have available
+    maxCompressedSize = dest.length - destPos - headerLength - 4;
+    if (Snappy.maxCompressedLength(length) > maxCompressedSize) {
+      return -1;
+    }
 
     compressedLength = Snappy.compress(src, srcPos, length, dest, destPos
         + headerLength + 4);

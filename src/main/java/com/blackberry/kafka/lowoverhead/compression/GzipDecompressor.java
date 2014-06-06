@@ -22,6 +22,9 @@ import java.util.zip.Inflater;
 
 import com.blackberry.kafka.lowoverhead.Constants;
 
+/**
+ * Decompressor implementation that used the GZIP algorithm.
+ */
 public class GzipDecompressor implements Decompressor {
   // various fields, as named in rfc 1952
   private static final byte ID1 = (byte) 0x1f;
@@ -48,6 +51,9 @@ public class GzipDecompressor implements Decompressor {
   private short extraLength;
   private int decompressedLength;
 
+  /**
+   * Constructor.
+   */
   public GzipDecompressor() {
     inflater = new Inflater(true);
   }
@@ -116,6 +122,10 @@ public class GzipDecompressor implements Decompressor {
     inflater.setInput(src, pos, length - (pos - srcPos) - 8);
     try {
       decompressedLength = inflater.inflate(dest, destPos, maxLength);
+      if (inflater.finished() == false) {
+        // There was not enough room to write the output
+        return -1;
+      }
     } catch (DataFormatException e) {
       throw new IOException("Error decompressing data.", e);
     }

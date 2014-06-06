@@ -187,10 +187,8 @@ public class MessageSetReader {
     while (true) {
       decompressedSize = decompressor.decompress(bytes, buffer.position(),
           valueLength, decompressionBytes, 0, decompressionBytes.length);
-      if (decompressedSize == -1
-          || decompressedSize == decompressionBytes.length) {
-        // we got back the maximum number of bytes we would accept. Most likely,
-        // this means there is more data that we can take. So increase our
+      if (decompressedSize == -1) {
+        // Our output buffer was not big enough. So increase our
         // buffers and retry. This should be very rare.
         decompressionBytes = new byte[2 * decompressionBytes.length];
       } else {

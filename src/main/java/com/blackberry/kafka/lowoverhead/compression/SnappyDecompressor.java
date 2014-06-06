@@ -22,6 +22,9 @@ import org.xerial.snappy.Snappy;
 
 import com.blackberry.kafka.lowoverhead.Constants;
 
+/**
+ * Decompressor implementation that used the Snappy algorithm.
+ */
 public class SnappyDecompressor implements Decompressor {
   private static final byte[] MAGIC_NUMBER = new byte[] { //
   -126, 'S', 'N', 'A', 'P', 'P', 'Y', 0 };
