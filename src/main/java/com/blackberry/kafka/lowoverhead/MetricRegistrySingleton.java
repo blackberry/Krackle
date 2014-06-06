@@ -18,6 +18,9 @@ package com.blackberry.kafka.lowoverhead;
 
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
@@ -26,12 +29,15 @@ import com.codahale.metrics.MetricRegistry;
  * A singleton to hold a metric registry.
  */
 public class MetricRegistrySingleton {
+  private static final Logger LOG = LoggerFactory
+      .getLogger(MetricRegistrySingleton.class);
 
   private MetricRegistry metricRegistry;
   private JmxReporter jmxReporter;
   private ConsoleReporter consoleReporter;
 
   private MetricRegistrySingleton() {
+    LOG.info("Creating metric registry");
     metricRegistry = new MetricRegistry();
   }
 
@@ -64,6 +70,7 @@ public class MetricRegistrySingleton {
    */
   public synchronized void enableJmx() {
     if (jmxReporter == null) {
+      LOG.info("Starting JMX reporting");
       jmxReporter = JmxReporter.forRegistry(metricRegistry).build();
       jmxReporter.start();
     }
@@ -84,6 +91,8 @@ public class MetricRegistrySingleton {
    */
   public synchronized void enableConsole(long ms) {
     if (consoleReporter == null) {
+      LOG.info("Starting console reporting with frequency {}ms", ms);
+
       consoleReporter = ConsoleReporter.forRegistry(metricRegistry)
           .convertRatesTo(TimeUnit.SECONDS)
           .convertDurationsTo(TimeUnit.MILLISECONDS).build();

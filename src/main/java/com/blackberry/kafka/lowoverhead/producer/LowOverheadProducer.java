@@ -185,8 +185,8 @@ public class LowOverheadProducer {
    */
   public LowOverheadProducer(ProducerConfiguration conf, String clientId,
       String topic, String key, MetricRegistry metrics) throws Exception {
-    LOG.info("New {} ({},{})", new Object[] { this.getClass().getName(), topic,
-        clientId });
+    LOG.info("Creating new producer for topic {}, key {}", topic, key);
+
     this.conf = conf;
 
     this.topicString = topic;
@@ -301,7 +301,7 @@ public class LowOverheadProducer {
     LOG.info("Updating metadata");
     metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString,
         clientIdString);
-    LOG.info("Metadata: {}", metadata);
+    LOG.debug("Metadata: {}", metadata);
 
     Topic topic = metadata.getTopic(topicString);
 
@@ -413,9 +413,8 @@ public class LowOverheadProducer {
 
     activeByteBuffer = activeMessageSetBuffer.getBuffer();
 
-    // LOG.info("Received: {}", new String(buffer, offset, length, UTF8));
-
-    activeByteBuffer.putLong(0L); // Offset
+    // Offset
+    activeByteBuffer.putLong(0L);
     // Size of uncompressed message
     activeByteBuffer.putInt(length + keyLength + 14);
 
@@ -449,7 +448,6 @@ public class LowOverheadProducer {
   protected void sendMessage(MessageSetBuffer messageSetBuffer) {
     // New message, new id
     correlationId++;
-    // LOG.info("Sending message {}", correlationId);
 
     /* headers */
     // Skip 4 bytes for the size
@@ -576,18 +574,15 @@ public class LowOverheadProducer {
 
           // Response bytes are
           // - 4 byte correlation id
-          // - 4 bytes for number of topics. This is always 1 in this
-          // case.
+          // - 4 bytes for number of topics. This is always 1 in this case.
           // - 2 bytes for length of topic name.
           // - topicLength bytes for topic
           // - 4 bytes for number of partitions. Always 1.
           // - 4 bytes for partition number (which we already know)
           // - 2 bytes for error code (That's interesting to us)
           // - 8 byte offset of the first message (we don't care).
-          // The only things we care about here are the correlation id
-          // (must
-          // match) and the error code (so we can throw an exception
-          // if it's not
+          // The only things we care about here are the correlation id (must
+          // match) and the error code (so we can throw an exception if it's not
           // 0)
           responseCorrelationId = responseBuffer.getInt();
           if (responseCorrelationId != correlationId) {

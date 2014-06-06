@@ -152,6 +152,9 @@ public class LowOverheadConsumer {
    */
   public LowOverheadConsumer(ConsumerConfiguration conf, String clientId,
       String topic, int partition, long offset, MetricRegistry metrics) {
+    LOG.info("Creating consumer for {}-{} from offset {}", topic, partition,
+        offset);
+
     this.conf = conf;
 
     if (metrics == null) {
@@ -236,9 +239,6 @@ public class LowOverheadConsumer {
       return -1;
     }
 
-    // LOG.info("Read message at offset {} ({} bytes)",
-    // messageSetReader.getOffset(), bytesReturned);
-
     lastOffset = messageSetReader.getOffset();
     offset = messageSetReader.getNextOffset();
     incrementMetrics(1, bytesReturned);
@@ -322,6 +322,9 @@ public class LowOverheadConsumer {
 
   private void sendOffsetRequest(long time, int correlationId)
       throws IOException {
+    LOG.debug("Sending request for offset. correlation id = {}, time = {}",
+        correlationId, time);
+
     offsetRequestBuffer.clear();
 
     // skip 4 bytes for length
@@ -369,6 +372,8 @@ public class LowOverheadConsumer {
   }
 
   private long getOffsetResponse(int correlationId) throws IOException {
+    LOG.debug("Waiting for response. correlation id = {}", correlationId);
+
     try {
       // read the length of the response
       bytesRead = 0;
@@ -379,8 +384,6 @@ public class LowOverheadConsumer {
       offsetResponseBuffer.clear();
       responseLength = offsetResponseBuffer.getInt();
 
-      LOG.info("message length is {}", responseLength);
-
       bytesRead = 0;
       while (bytesRead < responseLength) {
         bytesRead += brokerIn.read(offsetResponseBytes, bytesRead,
@@ -390,7 +393,6 @@ public class LowOverheadConsumer {
       offsetResponseBuffer.clear();
 
       // Check correlation Id
-      LOG.info("Checking correlation id");
       responseCorrelationId = offsetResponseBuffer.getInt();
       if (responseCorrelationId != correlationId) {
         LOG.error("correlation id mismatch.  Expected {}, got {}",
@@ -408,7 +410,6 @@ public class LowOverheadConsumer {
           + topicLength + 4 + 4);
 
       // Next is the error code.
-      LOG.info("Checking error code");
       errorCode = offsetResponseBuffer.getShort();
 
       if (errorCode == KafkaError.OffsetOutOfRange.getCode()) {
@@ -420,6 +421,7 @@ public class LowOverheadConsumer {
 
       // Finally, the offset. There is an array of one (skip 4 bytes)
       offsetResponseBuffer.position(offsetResponseBuffer.position() + 4);
+      LOG.debug("Succeeded in request.  correlation id = {}", correlationId);
       return offsetResponseBuffer.getLong();
 
     } finally {
@@ -437,6 +439,8 @@ public class LowOverheadConsumer {
   }
 
   private void sendConsumeRequest(int correlationId) throws IOException {
+    LOG.debug("Sending consume request. correlation id = {}", correlationId);
+
     requestBuffer.clear();
 
     // Skip 4 bytes for the request size
@@ -498,6 +502,8 @@ public class LowOverheadConsumer {
   private int messageSetSize;
 
   private void receiveConsumeResponse(int correlationId) throws IOException {
+    LOG.debug("Waiting for response. correlation id = {}", correlationId);
+
     try {
       // read the length of the response
       bytesRead = 0;
@@ -557,6 +563,8 @@ public class LowOverheadConsumer {
       messageSetReader.init(responseBytes, responseBuffer.position(),
           messageSetSize);
 
+      LOG.debug("Succeeded in request.  correlation id = {}", correlationId);
+
     } finally {
       // Clean out any other data that is sitting on the socket to be
       // read. It's
@@ -579,6 +587,8 @@ public class LowOverheadConsumer {
         Broker leader = meta.getBroker(meta.getTopic(topic)
             .getPartition(partition).getLeader());
 
+        LOG.info("Connecting to broker {} @ {}:{}", leader.getNodeId(),
+            leader.getHost(), leader.getPort());
         brokerSocket = new Socket(leader.getHost(), leader.getPort());
         brokerSocket.setReceiveBufferSize(conf.getSocketReceiveBufferBytes());
         brokerIn = brokerSocket.getInputStream();

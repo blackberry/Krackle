@@ -84,6 +84,8 @@ public class MetaData {
    */
   public static MetaData getMetaData(List<String> metadataBrokerList,
       String topicString, String clientIdString) {
+    LOG.info("Getting metadata for {}", topicString);
+
     MetaData metadata = new MetaData();
     metadata.setCorrelationId((int) System.currentTimeMillis());
 
@@ -94,8 +96,6 @@ public class MetaData {
       seedBrokers.add(new HostAndPort(hostPort[0], Integer
           .parseInt(hostPort[1])));
     }
-
-    LOG.debug("Getting metadata for topic {}", topicString);
 
     // Try each seed broker in a random order
     Collections.shuffle(seedBrokers);
@@ -211,6 +211,7 @@ public class MetaData {
       return null;
     }
 
+    LOG.info("Metadata request successful");
     return metadata;
   }
 
