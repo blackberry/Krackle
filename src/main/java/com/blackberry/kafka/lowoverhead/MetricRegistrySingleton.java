@@ -41,7 +41,7 @@ public class MetricRegistrySingleton {
 
   /**
    * Get the instance of MetricRegistrySingleton.
-   * 
+   *
    * @return the instance of the singleton.
    */
   public static MetricRegistrySingleton getInstance() {
@@ -50,7 +50,7 @@ public class MetricRegistrySingleton {
 
   /**
    * Get the MetricRegistry instance associated with the singleton.
-   * 
+   *
    * @return the MetricRegistry
    */
   public MetricRegistry getMetricsRegistry() {
@@ -59,7 +59,7 @@ public class MetricRegistrySingleton {
 
   /**
    * Turn on JMX reporting for this MetricRegistry.
-   * 
+   *
    * It is safe to call this multiple times.
    */
   public synchronized void enableJmx() {
@@ -78,7 +78,7 @@ public class MetricRegistrySingleton {
 
   /**
    * Enable console reporting for this MetricRegistry.
-   * 
+   *
    * @param ms
    *          how often to output data to the console, in milliseconds.
    */

@@ -16,6 +16,10 @@
 
 package com.blackberry.kafka.lowoverhead.consumer;
 
+/**
+ * A simple class for holding a message as as byte array and an offset as a
+ * long.
+ */
 public class MessageAndOffset {
   private byte[] message;
   private long offset;

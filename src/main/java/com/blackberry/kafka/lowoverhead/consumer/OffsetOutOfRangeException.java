@@ -18,8 +18,10 @@ package com.blackberry.kafka.lowoverhead.consumer;
 
 import java.io.IOException;
 
+/**
+ * Exception used to handle offset out of range errors being returned by a
+ * broker.
+ */
 public class OffsetOutOfRangeException extends IOException {
-
   private static final long serialVersionUID = 1L;
-
 }

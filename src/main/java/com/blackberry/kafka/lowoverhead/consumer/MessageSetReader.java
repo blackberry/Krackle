@@ -28,6 +28,9 @@ import com.blackberry.kafka.lowoverhead.compression.Decompressor;
 import com.blackberry.kafka.lowoverhead.compression.GzipDecompressor;
 import com.blackberry.kafka.lowoverhead.compression.SnappyDecompressor;
 
+/**
+ * Class to read a messages from a message set.
+ */
 public class MessageSetReader {
   private static final Logger LOG = LoggerFactory
       .getLogger(MessageSetReader.class);
@@ -47,6 +50,19 @@ public class MessageSetReader {
   private GzipDecompressor gzipDecompressor = null;
   private MessageSetReader messageSetReader = null;
 
+  /**
+   * Initialize with a message set.
+   *
+   * This copies the data from the source array, so the source can be altered
+   * afterwards with no impact to this class.
+   *
+   * @param src
+   *          byte array holding the message set.
+   * @param position
+   *          position in the source where the message set starts.
+   * @param length
+   *          length of the message set.
+   */
   public void init(byte[] src, int position, int length) {
     if (bytes.length < length) {
       bytes = new byte[length];
@@ -75,6 +91,21 @@ public class MessageSetReader {
   private int bytesCopied;
   private int decompressedSize;
 
+  /**
+   * Read in a message from message set into the given byte array.
+   *
+   * If the size of the message exceeds maxLength, it will be truncated to fit.
+   *
+   * @param dest
+   *          the byte array to write into.
+   * @param pos
+   *          the position in the byte array to write to.
+   * @param maxLength
+   *          the max size of the message to write.
+   * @return the number of bytes writen, or <code>-1</code> if no data was
+   *         returned.
+   * @throws IOException
+   */
   public int getMessage(byte[] dest, int pos, int maxLength) throws IOException {
     if (messageSetReader != null && messageSetReader.isReady()) {
       bytesCopied = messageSetReader.getMessage(dest, pos, maxLength);
@@ -220,14 +251,34 @@ public class MessageSetReader {
     return gzipDecompressor;
   }
 
+  /**
+   * Checks if this message set ready is ready.
+   *
+   * Ready means that it is initialized and has not reached the end of its data.
+   * This does not guarantee that the next request will succeed, since the
+   * remaining data could be a truncated message.
+   *
+   * @return <code>true</code> if this MessageSetReader is ready, otherwise
+   *         <code>false</code>.
+   */
   public boolean isReady() {
     return ready;
   }
 
+  /**
+   * Gets the offset of the last message read.
+   *
+   * @return the offset of the last message read.
+   */
   public long getOffset() {
     return offset;
   }
 
+  /**
+   * Gets the offset of the next message that would be returned.
+   *
+   * @return the offset of the next message that would be returned.
+   */
   public long getNextOffset() {
     return offset + 1;
   }

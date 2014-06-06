@@ -77,7 +77,7 @@ public enum KafkaError {
       + "produce a message larger than this maximum."
   ),
   StaleControllerEpochCode(
-      (short) 11, 
+      (short) 11,
       "Internal error code for broker-to-broker communication."
   ),
   OffsetMetadataTooLargeCode(
@@ -111,7 +111,7 @@ public enum KafkaError {
 
   /**
    * Returns the numerical error code for the error.
-   * 
+   *
    * @return the error code.
    */
   public short getCode() {
@@ -120,7 +120,7 @@ public enum KafkaError {
 
   /**
    * Returns the message associated with the error.
-   * 
+   *
    * @return the error message.
    */
   public String getMessage() {
@@ -129,7 +129,7 @@ public enum KafkaError {
 
   /**
    * Gets the message for a given error code.
-   * 
+   *
    * @param errorCode
    *          a numerical error code
    * @return the error message associated with the error code
