@@ -34,6 +34,15 @@ import org.slf4j.LoggerFactory;
 
 import com.blackberry.kafka.lowoverhead.Constants;
 
+/**
+ * Gather and store metadata for a topic.
+ *
+ * Contents are
+ * <ul>
+ * <li>brokers: a map of broker id to Broker object</li>
+ * <li>topics: a map of topic names to Topic objects</li>
+ * </ul>
+ */
 public class MetaData {
   private static final Logger LOG = LoggerFactory.getLogger(MetaData.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
@@ -42,6 +51,18 @@ public class MetaData {
   private Map<String, Topic> topics = new HashMap<String, Topic>();
   private int correlationId;
 
+  /**
+   * New instance, with the list of seed brokers represented as a comma
+   * separated list of host:port entries.
+   *
+   * @param metadataBrokerListString
+   *          comma separated list of host:port entries.
+   * @param topicString
+   *          topic to get metadata about.
+   * @param clientIdString
+   *          clientId to send with request.
+   * @return a new MetaData object containing information on the topic.
+   */
   public static MetaData getMetaData(String metadataBrokerListString,
       String topicString, String clientIdString) {
     List<String> metadataBrokerList = Arrays.asList(metadataBrokerListString
@@ -49,6 +70,18 @@ public class MetaData {
     return getMetaData(metadataBrokerList, topicString, clientIdString);
   }
 
+  /**
+   * New instance, with the list of seed brokers represented a List of host:port
+   * entries.
+   *
+   * @param metadataBrokerListString
+   *          comma separated list of host:port entries.
+   * @param topicString
+   *          topic to get metadata about.
+   * @param clientIdString
+   *          clientId to send with request.
+   * @return a new MetaData object containing information on the topic.
+   */
   public static MetaData getMetaData(List<String> metadataBrokerList,
       String topicString, String clientIdString) {
     MetaData metadata = new MetaData();

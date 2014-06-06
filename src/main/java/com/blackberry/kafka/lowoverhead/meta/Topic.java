@@ -19,6 +19,9 @@ package com.blackberry.kafka.lowoverhead.meta;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Holder for information about a topic.
+ */
 public class Topic {
   String name;
   List<Partition> partitions = new ArrayList<Partition>();

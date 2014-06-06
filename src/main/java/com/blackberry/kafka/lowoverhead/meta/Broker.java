@@ -16,6 +16,9 @@
 
 package com.blackberry.kafka.lowoverhead.meta;
 
+/**
+ * Class to hold the id, host and port of a Kafka broker.
+ */
 public class Broker {
   private int nodeId;
   private String host;

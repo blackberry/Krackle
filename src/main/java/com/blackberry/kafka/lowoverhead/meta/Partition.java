@@ -19,6 +19,9 @@ package com.blackberry.kafka.lowoverhead.meta;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Holder for information about a partition.
+ */
 public class Partition {
   int partId;
   int leader;
