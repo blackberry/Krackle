@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -47,6 +48,7 @@ import com.codahale.metrics.MetricRegistry;
 public class LowOverheadProducer {
   private static final Logger LOG = LoggerFactory
       .getLogger(LowOverheadProducer.class);
+  private static final Charset UTF8 = Charset.forName("UTF-8");
 
   private ProducerConfiguration conf;
 
@@ -141,15 +143,15 @@ public class LowOverheadProducer {
     this.conf = conf;
 
     this.topicString = topic;
-    this.topicBytes = topic.getBytes(Constants.UTF8);
+    this.topicBytes = topic.getBytes(UTF8);
     this.topicLength = (short) topicBytes.length;
 
     this.clientIdString = clientId;
-    this.clientIdBytes = clientId.getBytes(Constants.UTF8);
+    this.clientIdBytes = clientId.getBytes(UTF8);
     this.clientIdLength = (short) clientId.length();
 
     this.keyString = key;
-    this.keyBytes = key.getBytes(Constants.UTF8);
+    this.keyBytes = key.getBytes(UTF8);
     this.keyLength = keyBytes.length;
 
     if (metrics == null) {

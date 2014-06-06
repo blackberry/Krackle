@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,6 +36,7 @@ import com.blackberry.kafka.lowoverhead.Constants;
 
 public class MetaData {
   private static final Logger LOG = LoggerFactory.getLogger(MetaData.class);
+  private static final Charset UTF8 = Charset.forName("UTF-8");
 
   private Map<Integer, Broker> brokers = new HashMap<Integer, Broker>();
   private Map<String, Topic> topics = new HashMap<String, Topic>();
@@ -86,9 +88,8 @@ public class MetaData {
 
     try {
       sock.getOutputStream().write(
-          buildMetadataRequest(topicString.getBytes(Constants.UTF8),
-              clientIdString.getBytes(Constants.UTF8),
-              metadata.getCorrelationId()));
+          buildMetadataRequest(topicString.getBytes(UTF8),
+              clientIdString.getBytes(UTF8), metadata.getCorrelationId()));
 
       byte[] sizeBuffer = new byte[4];
       InputStream in = sock.getInputStream();
@@ -184,7 +185,7 @@ public class MetaData {
     short length = bb.getShort();
     byte[] a = new byte[length];
     bb.get(a);
-    return new String(a, Constants.UTF8);
+    return new String(a, UTF8);
   }
 
   private static byte[] buildMetadataRequest(byte[] topic, byte[] clientId,

@@ -22,6 +22,9 @@ import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 
+/**
+ * A singleton to hold a metric registry.
+ */
 public class MetricRegistrySingleton {
 
   private MetricRegistry metricRegistry;
@@ -36,14 +39,29 @@ public class MetricRegistrySingleton {
     private static final MetricRegistrySingleton INSTANCE = new MetricRegistrySingleton();
   }
 
+  /**
+   * Get the instance of MetricRegistrySingleton.
+   * 
+   * @return the instance of the singleton.
+   */
   public static MetricRegistrySingleton getInstance() {
     return SingletonHolder.INSTANCE;
   }
 
+  /**
+   * Get the MetricRegistry instance associated with the singleton.
+   * 
+   * @return the MetricRegistry
+   */
   public MetricRegistry getMetricsRegistry() {
     return metricRegistry;
   }
 
+  /**
+   * Turn on JMX reporting for this MetricRegistry.
+   * 
+   * It is safe to call this multiple times.
+   */
   public synchronized void enableJmx() {
     if (jmxReporter == null) {
       jmxReporter = JmxReporter.forRegistry(metricRegistry).build();
@@ -51,10 +69,19 @@ public class MetricRegistrySingleton {
     }
   }
 
+  /**
+   * Enable console reporting for this MetricRegistry with 1 minute frequency.
+   */
   public void enableConsole() {
     enableConsole(60000);
   }
 
+  /**
+   * Enable console reporting for this MetricRegistry.
+   * 
+   * @param ms
+   *          how often to output data to the console, in milliseconds.
+   */
   public synchronized void enableConsole(long ms) {
     if (consoleReporter == null) {
       consoleReporter = ConsoleReporter.forRegistry(metricRegistry)
