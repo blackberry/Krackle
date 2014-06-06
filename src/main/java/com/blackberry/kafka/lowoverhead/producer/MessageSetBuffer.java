@@ -18,7 +18,10 @@ package com.blackberry.kafka.lowoverhead.producer;
 
 import java.nio.ByteBuffer;
 
-public class MessageSetBuffer implements Runnable {
+/**
+ * Buffer to hold data that is to be sent to Kafka.
+ */
+public class MessageSetBuffer {
   private int size;
   private byte[] bytes;
   private ByteBuffer buffer;
@@ -30,11 +33,6 @@ public class MessageSetBuffer implements Runnable {
     this.size = size;
     bytes = new byte[this.size];
     buffer = ByteBuffer.wrap(bytes);
-  }
-
-  @Override
-  public void run() {
-    producer.sendMessage(this);
   }
 
   public void clear() {

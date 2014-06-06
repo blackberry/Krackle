@@ -45,6 +45,22 @@ import com.blackberry.kafka.lowoverhead.meta.Topic;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 
+/**
+ * An implementation of the Kafka 0.8 producer.
+ *
+ * This class acts as a producer of data to a cluster of Kafka brokers. Each
+ * instance only sends data for a single topic, using a single key. If you need
+ * to write to more topics (or using different keys), then instantiate more
+ * instances.
+ *
+ * This producer is asynchonous only. There is no synchronous mode.
+ *
+ * This class was designed to be very light weight. The standard Java client
+ * creates a lot of objects, and therefore causes a lot of garbage collection
+ * that leads to a major slowdown in performance. This client creates ver few
+ * new objects during steady state running, and so avoids most garbage
+ * collection overhead.
+ */
 public class LowOverheadProducer {
   private static final Logger LOG = LoggerFactory
       .getLogger(LowOverheadProducer.class);
@@ -87,9 +103,6 @@ public class LowOverheadProducer {
   private ByteBuffer toSendBuffer;
 
   // Buffer for reading responses from the server.
-  // Assuming we only send for one topic per message, then this only needs to
-  // be topic.length + 24 bytes
-  private int responseBufferSize;
   private byte[] responseBytes;
   private ByteBuffer responseBuffer;
 
@@ -136,6 +149,40 @@ public class LowOverheadProducer {
   private Meter sent = null;
   private Meter dropped = null;
 
+  /**
+   * Create a new producer.
+   *
+   * @param conf
+   *          ProducerConfiguration to use
+   * @param clientId
+   *          client id to send to the brokers
+   * @param topic
+   *          topic to produce on
+   * @param key
+   *          key to use for partitioning
+   * @throws Exception
+   */
+  public LowOverheadProducer(ProducerConfiguration conf, String clientId,
+      String topic, String key) throws Exception {
+    this(conf, clientId, topic, key, null);
+  }
+
+  /**
+   * Create a new producer using a given instance of MetricRegistry instead of
+   * the default singleton.
+   *
+   * @param conf
+   *          ProducerConfiguration to use
+   * @param clientId
+   *          client id to send to the brokers
+   * @param topic
+   *          topic to produce on
+   * @param key
+   *          key to use for partitioning
+   * @param metrics
+   *          MetricRegistry instance to use for metrics.
+   * @throws Exception
+   */
   public LowOverheadProducer(ProducerConfiguration conf, String clientId,
       String topic, String key, MetricRegistry metrics) throws Exception {
     LOG.info("New {} ({},{})", new Object[] { this.getClass().getName(), topic,
@@ -216,7 +263,6 @@ public class LowOverheadProducer {
     brokerTimeout = conf.getRequestTimeoutMs();
     retries = conf.getMessageSendMaxRetries();
     sendBufferSize = conf.getSendBufferSize();
-    responseBufferSize = conf.getResponseBufferSize();
     topicMetadataRefreshIntervalMs = conf.getTopicMetadataRefreshIntervalMs();
     queueBufferingMaxMs = conf.getQueueBufferingMaxMs();
 
@@ -234,7 +280,9 @@ public class LowOverheadProducer {
     toSendBytes = new byte[sendBufferSize];
     toSendBuffer = ByteBuffer.wrap(toSendBytes);
 
-    responseBytes = new byte[responseBufferSize];
+    // We need this to be big enough to read the length of the first response,
+    // then we can expand it to the appropriate size.
+    responseBytes = new byte[4];
     responseBuffer = ByteBuffer.wrap(responseBytes);
 
     if (compressionCodec.equals("none")) {
@@ -299,8 +347,19 @@ public class LowOverheadProducer {
   private MessageSetBuffer activeMessageSetBuffer = null;
   private ByteBuffer activeByteBuffer;
 
-  // Add a message to the send queue. Takes bytes from buffer from start, up
-  // to length bytes.
+  /**
+   * Add a message to the send queue
+   *
+   * Takes bytes from buffer from start, up to length bytes.
+   *
+   * @param buffer
+   *          byte array to read from.
+   * @param offset
+   *          location in source to start from.
+   * @param length
+   *          length of input data to read.
+   * @throws Exception
+   */
   public synchronized void send(byte[] buffer, int offset, int length)
       throws Exception {
     if (closed) {
@@ -508,6 +567,10 @@ public class LowOverheadProducer {
           responseBuffer.clear();
           in.read(responseBytes, 0, 4);
           responseSize = responseBuffer.getInt();
+          if (responseBuffer.capacity() < responseSize) {
+            responseBytes = new byte[responseSize];
+            responseBuffer = ByteBuffer.wrap(responseBytes);
+          }
           responseBuffer.clear();
           in.read(responseBytes, 0, responseSize);
 

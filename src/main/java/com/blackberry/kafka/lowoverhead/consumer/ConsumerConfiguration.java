@@ -26,6 +26,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Configuration for a consumer.
  *
+ * Many of these properties are the same as those in the standard Java client,
+ * as documented at http://kafka.apache.org/documentation.html#consumerconfigs
+ *
  * Valid properties are
  * <table>
  *
