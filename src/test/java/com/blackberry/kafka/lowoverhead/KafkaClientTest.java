@@ -33,7 +33,6 @@ import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
-import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -337,50 +336,6 @@ public class KafkaClientTest {
       if (error != null) {
         throw error;
       }
-    }
-  }
-
-  @Test
-  public void testAppender() throws Throwable {
-    final String topic = "log4j-test";
-    setupTopic(topic);
-
-    ConsumerConnector consumer = getStdConsumer();
-    Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
-    topicCountMap.put(topic, 1);
-    final Map<String, List<KafkaStream<byte[], byte[]>>> streams = consumer
-        .createMessageStreams(topicCountMap);
-
-    error = null;
-    Thread t = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          ConsumerIterator<byte[], byte[]> it = streams.get(topic).get(0)
-              .iterator();
-
-          for (int i = 0; i < logs.size(); i++) {
-            String line = new String(it.next().message());
-            String message = line.split(" ", 4)[3].trim();
-            assertEquals(logs.get(i), message);
-          }
-        } catch (Throwable t) {
-          setError(t);
-        }
-      }
-
-    });
-    t.start();
-    Thread.sleep(100);
-
-    Logger logger = Logger.getLogger("test.appender");
-    for (String log : logs) {
-      logger.info(log);
-    }
-
-    t.join();
-    if (error != null) {
-      throw error;
     }
   }
 
