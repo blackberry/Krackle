@@ -305,48 +305,47 @@ public class LowOverheadConsumer {
     mBrokerReadAttempts.mark();
     mBrokerReadAttemptsTotal.mark();
 
-    while (true) {
-      if (brokerSocket == null || brokerSocket.isClosed()) {
-        LOG.info("Connecting to broker.");
-        connectToBroker();
-      }
-
-      try {
-        correlationId++;
-
-        sendConsumeRequest(correlationId);
-        receiveConsumeResponse(correlationId);
-
-        mBrokerReadSuccess.mark();
-        mBrokerReadSuccessTotal.mark();
-        break;
-      } catch (OffsetOutOfRangeException e) {
-        if (conf.getAutoOffsetReset().equals("smallest")) {
-          LOG.warn("Offset out of range.  Resetting to the earliest offset available.");
-          offset = getEarliestOffset();
-        } else if (conf.getAutoOffsetReset().equals("largest")) {
-          LOG.warn("Offset out of range.  Resetting to the latest offset available.");
-          offset = getLatestOffset();
-        } else {
-          throw e;
-        }
-      } catch (Exception e) {
-        LOG.error("Error getting data from broker.", e);
-
-        if (brokerSocket != null) {
-          try {
-            brokerSocket.close();
-          } catch (IOException e1) {
-            LOG.error("Error closing socket.", e1);
-          }
-        }
-        brokerSocket = null;
-
-        mBrokerReadFailure.mark();
-        mBrokerReadFailureTotal.mark();
-      }
+    if (brokerSocket == null || brokerSocket.isClosed()) {
+      LOG.info("Connecting to broker.");
+      connectToBroker();
     }
 
+    try {
+      correlationId++;
+
+      sendConsumeRequest(correlationId);
+      receiveConsumeResponse(correlationId);
+
+      mBrokerReadSuccess.mark();
+      mBrokerReadSuccessTotal.mark();
+    } catch (OffsetOutOfRangeException e) {
+      mBrokerReadFailure.mark();
+      mBrokerReadFailureTotal.mark();
+
+      if (conf.getAutoOffsetReset().equals("smallest")) {
+        LOG.warn("Offset out of range.  Resetting to the earliest offset available.");
+        offset = getEarliestOffset();
+      } else if (conf.getAutoOffsetReset().equals("largest")) {
+        LOG.warn("Offset out of range.  Resetting to the latest offset available.");
+        offset = getLatestOffset();
+      } else {
+        throw e;
+      }
+    } catch (Exception e) {
+      LOG.error("Error getting data from broker.", e);
+
+      if (brokerSocket != null) {
+        try {
+          brokerSocket.close();
+        } catch (IOException e1) {
+          LOG.error("Error closing socket.", e1);
+        }
+      }
+      brokerSocket = null;
+
+      mBrokerReadFailure.mark();
+      mBrokerReadFailureTotal.mark();
+    }
   }
 
   private long getEarliestOffset() {
