@@ -142,12 +142,12 @@ public class LowOverheadProducer {
       .newSingleThreadScheduledExecutor();
 
   private MetricRegistry metrics;
-  private Meter receivedTotal = null;
-  private Meter sentTotal = null;
-  private Meter droppedTotal = null;
-  private Meter received = null;
-  private Meter sent = null;
-  private Meter dropped = null;
+  private Meter mReceived = null;
+  private Meter mReceivedTotal = null;
+  private Meter mSent = null;
+  private Meter mSentTotal = null;
+  private Meter mDropped = null;
+  private Meter mDroppedTotal = null;
 
   /**
    * Create a new producer.
@@ -208,20 +208,7 @@ public class LowOverheadProducer {
     } else {
       this.metrics = metrics;
     }
-
-    receivedTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages received"));
-    sentTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages sent"));
-    droppedTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages dropped"));
-
-    received = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages received [" + topic + "]"));
-    sent = this.metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
-        "total messages sent[" + topic + "]"));
-    dropped = this.metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
-        "total messages dropped[" + topic + "]"));
+    initializeMetrics();
 
     configure();
 
@@ -255,6 +242,23 @@ public class LowOverheadProducer {
     senderThread.setDaemon(false);
     senderThread.setName("Sender-Thread");
     senderThread.start();
+  }
+
+  private void initializeMetrics() {
+    String name = "[" + topicString + "]";
+
+    mReceived = this.metrics.meter(MetricRegistry.name(
+        LowOverheadProducer.class, "total messages received " + name));
+    mReceivedTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadProducer.class, "total messages received"));
+    mSent = this.metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
+        "total messages sent " + name));
+    mSentTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadProducer.class, "total messages sent"));
+    mDropped = this.metrics.meter(MetricRegistry.name(
+        LowOverheadProducer.class, "total messages dropped " + name));
+    mDroppedTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadProducer.class, "total messages dropped"));
   }
 
   private void configure() throws Exception {
@@ -390,8 +394,8 @@ public class LowOverheadProducer {
       return;
     }
 
-    received.mark();
-    receivedTotal.mark();
+    mReceived.mark();
+    mReceivedTotal.mark();
 
     if (activeMessageSetBuffer.getBuffer().remaining() < length + keyLength
         + 26) {
@@ -617,16 +621,16 @@ public class LowOverheadProducer {
           }
         } else {
           LOG.error("Request failed. No more retries (data lost).", t);
-          dropped.mark(messageSetBuffer.getBatchSize());
-          droppedTotal.mark(messageSetBuffer.getBatchSize());
+          mDropped.mark(messageSetBuffer.getBatchSize());
+          mDroppedTotal.mark(messageSetBuffer.getBatchSize());
         }
 
       }
     }
 
     toSendBuffer.clear();
-    sent.mark(messageSetBuffer.getBatchSize());
-    sentTotal.mark(messageSetBuffer.getBatchSize());
+    mSent.mark(messageSetBuffer.getBatchSize());
+    mSentTotal.mark(messageSetBuffer.getBatchSize());
 
     // Periodic metadata refreshes.
     if (topicMetadataRefreshIntervalMs >= 0

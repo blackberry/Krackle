@@ -87,10 +87,20 @@ public class LowOverheadConsumer {
   private int fetchMinBytes;
 
   private MetricRegistry metrics;
-  private Meter messagesTotal = null;
-  private Meter bytesTotal = null;
-  private Meter messages = null;
-  private Meter bytes = null;
+  private Meter mMessageRequests = null;
+  private Meter mMessageRequestsTotal = null;
+  private Meter mMessagesReturned = null;
+  private Meter mMessagesReturnedTotal = null;
+  private Meter mBytesReturned = null;
+  private Meter mBytesReturnedTotal = null;
+  private Meter mMessageRequestsNoData = null;
+  private Meter mMessageRequestsNoDataTotal = null;
+  private Meter mBrokerReadAttempts = null;
+  private Meter mBrokerReadAttemptsTotal = null;
+  private Meter mBrokerReadSuccess = null;
+  private Meter mBrokerReadSuccessTotal = null;
+  private Meter mBrokerReadFailure = null;
+  private Meter mBrokerReadFailureTotal = null;
 
   /**
    * Create a new consumer that reads from a given consumer. It attempts to
@@ -165,15 +175,7 @@ public class LowOverheadConsumer {
       this.metrics = metrics;
     }
 
-    messagesTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "total messages retrieved"));
-    bytesTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "total bytes retrieved"));
-    messages = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "messages retrieved [" + topic + "-"
-            + partition + "]"));
-    bytes = this.metrics.meter(MetricRegistry.name(LowOverheadConsumer.class,
-        "bytes retrieved [" + topic + "-" + partition + "]"));
+    initializeMetrics();
 
     this.clientId = clientId;
     clientIdBytes = clientId.getBytes(UTF8);
@@ -206,6 +208,41 @@ public class LowOverheadConsumer {
     connectToBroker();
   }
 
+  private void initializeMetrics() {
+
+    String name = "[" + topic + "-" + partition + "]";
+
+    mMessageRequests = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "message requests " + name));
+    mMessageRequestsTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "message requests [total]"));
+    mMessagesReturned = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "message returned " + name));
+    mMessagesReturnedTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "message returned [total]"));
+    mBytesReturned = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "bytes returned " + name));
+    mBytesReturnedTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "bytes returned [total]"));
+    mMessageRequestsNoData = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "no message returned " + name));
+    mMessageRequestsNoDataTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "no message returned [total]"));
+
+    mBrokerReadAttempts = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "broker consume attempts " + name));
+    mBrokerReadAttemptsTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "broker consume attempts [total]"));
+    mBrokerReadSuccess = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "broker consume success " + name));
+    mBrokerReadSuccessTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "broker consume success [total]"));
+    mBrokerReadFailure = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "broker consume failure " + name));
+    mBrokerReadFailureTotal = this.metrics.meter(MetricRegistry.name(
+        LowOverheadConsumer.class, "broker consume failure [total]"));
+  }
+
   private int bytesReturned = 0;
 
   /**
@@ -225,10 +262,16 @@ public class LowOverheadConsumer {
    */
   public int getMessage(byte[] buffer, int pos, int maxLength)
       throws IOException {
+
+    mMessageRequests.mark();
+    mMessageRequestsTotal.mark();
+
     if (messageSetReader == null || messageSetReader.isReady() == false) {
       readFromBroker();
 
       if (messageSetReader == null || messageSetReader.isReady() == false) {
+        mMessageRequestsNoData.mark();
+        mMessageRequestsNoDataTotal.mark();
         return -1;
       }
     }
@@ -236,21 +279,20 @@ public class LowOverheadConsumer {
     bytesReturned = messageSetReader.getMessage(buffer, pos, maxLength);
 
     if (bytesReturned == -1) {
+      mMessageRequestsNoData.mark();
+      mMessageRequestsNoDataTotal.mark();
       return -1;
     }
 
     lastOffset = messageSetReader.getOffset();
     offset = messageSetReader.getNextOffset();
-    incrementMetrics(1, bytesReturned);
+
+    mMessagesReturned.mark();
+    mMessagesReturnedTotal.mark();
+    mBytesReturned.mark(bytesReturned);
+    mBytesReturnedTotal.mark(bytesReturned);
 
     return bytesReturned;
-  }
-
-  private void incrementMetrics(int msg, int b) {
-    messages.mark(msg);
-    messagesTotal.mark(msg);
-    bytes.mark(b);
-    bytesTotal.mark(b);
   }
 
   private Socket brokerSocket = null;
@@ -260,6 +302,9 @@ public class LowOverheadConsumer {
   private int correlationId = 0;
 
   private void readFromBroker() throws IOException {
+    mBrokerReadAttempts.mark();
+    mBrokerReadAttemptsTotal.mark();
+
     while (true) {
       if (brokerSocket == null || brokerSocket.isClosed()) {
         LOG.info("Connecting to broker.");
@@ -271,6 +316,9 @@ public class LowOverheadConsumer {
 
         sendConsumeRequest(correlationId);
         receiveConsumeResponse(correlationId);
+
+        mBrokerReadSuccess.mark();
+        mBrokerReadSuccessTotal.mark();
         break;
       } catch (OffsetOutOfRangeException e) {
         if (conf.getAutoOffsetReset().equals("smallest")) {
@@ -293,6 +341,9 @@ public class LowOverheadConsumer {
           }
         }
         brokerSocket = null;
+
+        mBrokerReadFailure.mark();
+        mBrokerReadFailureTotal.mark();
       }
     }
 
