@@ -122,8 +122,13 @@ public class GzipDecompressor implements Decompressor {
     inflater.setInput(src, pos, length - (pos - srcPos) - 8);
     try {
       decompressedLength = inflater.inflate(dest, destPos, maxLength);
-      if (inflater.finished() == false) {
+
+      // Sometimes we get truncated input. So we may not be 'finished'
+      // inflating, but we still want to return success. So only fail if we have
+      // the buffer full, and are not finished.
+      if (inflater.finished() == false && decompressedLength == maxLength) {
         // There was not enough room to write the output
+
         return -1;
       }
     } catch (DataFormatException e) {

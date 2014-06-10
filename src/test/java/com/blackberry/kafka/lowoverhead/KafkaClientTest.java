@@ -48,7 +48,6 @@ import com.blackberry.testutil.LocalZkServer;
 public class KafkaClientTest {
   private static final String[] COMPRESSION_METHODS = new String[] { "none",
       "snappy", "gzip" };
-
   Throwable error = null;
 
   static LocalZkServer zk;
@@ -101,11 +100,13 @@ public class KafkaClientTest {
   private Producer<String, String> getStdProducer(String compression) {
     Properties producerProps = new Properties();
     producerProps.setProperty("metadata.broker.list", "localhost:9876");
+    producerProps.setProperty("compression.codec", compression);
+    producerProps.setProperty("queue.buffering.max.ms", "100");
+    producerProps.setProperty("queue.enqueue.timeout.ms", "-1");
     producerProps.setProperty("request.required.acks", "1");
     producerProps.setProperty("producer.type", "async");
     producerProps.setProperty("serializer.class",
         "kafka.serializer.StringEncoder");
-    producerProps.setProperty("compression.codec", compression);
     ProducerConfig producerConf = new ProducerConfig(producerProps);
     Producer<String, String> producer = new Producer<String, String>(
         producerConf);
@@ -119,6 +120,7 @@ public class KafkaClientTest {
     producerProps.setProperty("compression.code", compression);
     producerProps.setProperty("queue.buffering.max.ms", "100");
     producerProps.setProperty("queue.enqueue.timeout.ms", "-1");
+    producerProps.setProperty("request.required.acks", "1");
     producerProps.setProperty("num.buffers", "10");
     ProducerConfiguration producerConf = new ProducerConfiguration(
         producerProps);

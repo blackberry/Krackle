@@ -221,6 +221,8 @@ public class MessageSetReader {
       if (decompressedSize == -1) {
         // Our output buffer was not big enough. So increase our
         // buffers and retry. This should be very rare.
+        LOG.info("Expanding decompression buffer from {} to {}",
+            decompressionBytes.length, 2 * decompressionBytes.length);
         decompressionBytes = new byte[2 * decompressionBytes.length];
       } else {
         // we didn't fill the buffer. So our buffer was big enough.
