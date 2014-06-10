@@ -52,10 +52,10 @@ public class MessageSetReader {
 
   /**
    * Initialize with a message set.
-   *
+   * 
    * This copies the data from the source array, so the source can be altered
    * afterwards with no impact to this class.
-   *
+   * 
    * @param src
    *          byte array holding the message set.
    * @param position
@@ -93,9 +93,9 @@ public class MessageSetReader {
 
   /**
    * Read in a message from message set into the given byte array.
-   *
+   * 
    * If the size of the message exceeds maxLength, it will be truncated to fit.
-   *
+   * 
    * @param dest
    *          the byte array to write into.
    * @param pos
@@ -255,11 +255,11 @@ public class MessageSetReader {
 
   /**
    * Checks if this message set ready is ready.
-   *
+   * 
    * Ready means that it is initialized and has not reached the end of its data.
    * This does not guarantee that the next request will succeed, since the
    * remaining data could be a truncated message.
-   *
+   * 
    * @return <code>true</code> if this MessageSetReader is ready, otherwise
    *         <code>false</code>.
    */
@@ -269,7 +269,7 @@ public class MessageSetReader {
 
   /**
    * Gets the offset of the last message read.
-   *
+   * 
    * @return the offset of the last message read.
    */
   public long getOffset() {
@@ -278,7 +278,7 @@ public class MessageSetReader {
 
   /**
    * Gets the offset of the next message that would be returned.
-   *
+   * 
    * @return the offset of the next message that would be returned.
    */
   public long getNextOffset() {

@@ -24,18 +24,18 @@ import java.io.IOException;
 public interface Decompressor {
   /**
    * Return the attribute value associated with this compression method.
-   *
+   * 
    * @return the attribute value associated with this compression method.
    */
   public byte getAttribute();
 
   /**
    * Decompresses the data from the source array into the destination array.
-   *
+   * 
    * If the destination array is (potentially) not big enough to hold the
    * decompressed data, then the decompress method will not decompress anything
    * and return <code>-1</code>.
-   *
+   * 
    * @param src
    *          source byte array.
    * @param srcPos

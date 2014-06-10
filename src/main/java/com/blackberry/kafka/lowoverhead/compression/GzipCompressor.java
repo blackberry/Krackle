@@ -53,7 +53,7 @@ public class GzipCompressor implements Compressor {
 
   /**
    * New instance with the given compression level
-   *
+   * 
    * @param compressionLevel
    *          requested compression level. Valid values are <code>-1</code>
    *          (default compression), <code>0</code> (no compression),

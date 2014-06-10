@@ -25,26 +25,26 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Configuration for a consumer.
- *
+ * 
  * Many of these properties are the same as those in the standard Java client,
  * as documented at http://kafka.apache.org/documentation.html#consumerconfigs
- *
+ * 
  * Valid properties are
  * <table>
- *
+ * 
  * <tr>
  * <th>property</th>
  * <th>default</th>
  * <th>description</th>
  * </tr>
- *
+ * 
  * <tr>
  * <td>metadata.broker.list</td>
  * <td></td>
  * <td>(required) A list of seed brokers to connect to in order to get
  * information about the Kafka broker cluster.</td>
  * </tr>
- *
+ * 
  * <tr>
  * <td>fetch.message.max.bytes</td>
  * <td>1024 * 1024</td>
@@ -55,7 +55,7 @@ import org.slf4j.LoggerFactory;
  * the server allows or else it is possible for the producer to send messages
  * larger than the consumer can fetch.</td>
  * </tr>
- *
+ * 
  * <tr>
  * <td>fetch.wait.max.ms</td>
  * <td>100</td>
@@ -63,7 +63,7 @@ import org.slf4j.LoggerFactory;
  * fetch request if there isn't sufficient data to immediately satisfy
  * fetch.min.bytes</td>
  * </tr>
- *
+ * 
  * <tr>
  * <td>fetch.min.bytes</td>
  * <td>1</td>
@@ -71,13 +71,13 @@ import org.slf4j.LoggerFactory;
  * If insufficient data is available the request will wait for that much data to
  * accumulate before answering the request.</td>
  * </tr>
- *
+ * 
  * <tr>
  * <td>socket.receive.buffer.bytes</td>
  * <td>64 * 1024</td>
  * <td>The socket receive buffer for network requests</td>
  * </tr>
- *
+ * 
  * <tr>
  * <td>auto.offset.reset</td>
  * <td>largest</td>
@@ -90,7 +90,7 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </td>
  * </tr>
- *
+ * 
  * </table>
  */
 public class ConsumerConfiguration {
@@ -106,7 +106,7 @@ public class ConsumerConfiguration {
 
   /**
    * Creates a new configuration from a given Properties object.
-   *
+   * 
    * @param props
    *          Properties to build configuration from.
    * @throws Exception

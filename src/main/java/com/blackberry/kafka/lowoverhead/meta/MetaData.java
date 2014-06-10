@@ -36,7 +36,7 @@ import com.blackberry.kafka.lowoverhead.Constants;
 
 /**
  * Gather and store metadata for a topic.
- *
+ * 
  * Contents are
  * <ul>
  * <li>brokers: a map of broker id to Broker object</li>
@@ -54,7 +54,7 @@ public class MetaData {
   /**
    * New instance, with the list of seed brokers represented as a comma
    * separated list of host:port entries.
-   *
+   * 
    * @param metadataBrokerListString
    *          comma separated list of host:port entries.
    * @param topicString
@@ -73,7 +73,7 @@ public class MetaData {
   /**
    * New instance, with the list of seed brokers represented a List of host:port
    * entries.
-   *
+   * 
    * @param metadataBrokerListString
    *          comma separated list of host:port entries.
    * @param topicString

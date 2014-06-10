@@ -36,11 +36,11 @@ import com.codahale.metrics.MetricRegistry;
 
 /**
  * An implementation of the Kafka 0.8 consumer.
- *
+ * 
  * This class acts as a consumer of data from a cluster of Kafka brokers. Each
  * instance only reads data from a single partition of a single topic. If you
  * need to read more than that, then instantiate more instances.
- *
+ * 
  * This class was designed to be very light weight. The standard Java client
  * creates a lot of objects, and therefore causes a lot of garbage collection
  * that leads to a major slowdown in performance. This client creates no new
@@ -105,7 +105,7 @@ public class LowOverheadConsumer {
   /**
    * Create a new consumer that reads from a given consumer. It attempts to
    * start at offset 0.
-   *
+   * 
    * @param conf
    *          ConsumerConfiguration for this consumer.
    * @param clientId
@@ -123,7 +123,7 @@ public class LowOverheadConsumer {
   /**
    * Create a new consumer that reads from a given consumer that attempts to
    * start reading at the given offset.
-   *
+   * 
    * @param conf
    *          ConsumerConfiguration for this consumer.
    * @param clientId
@@ -143,10 +143,10 @@ public class LowOverheadConsumer {
   /**
    * Create a new consumer that reads from a given consumer that attempts to
    * start reading at the given offset.
-   *
+   * 
    * Metrics are reported using the given instance of MetricRegistry instead the
    * internal singleton instance.
-   *
+   * 
    * @param conf
    *          ConsumerConfiguration for this consumer.
    * @param clientId
@@ -247,9 +247,9 @@ public class LowOverheadConsumer {
 
   /**
    * Read in a message from Kafka into the given byte array.
-   *
+   * 
    * If the size of the message exceeds maxLength, it will be truncated to fit.
-   *
+   * 
    * @param buffer
    *          the byte array to write into.
    * @param pos
@@ -658,7 +658,7 @@ public class LowOverheadConsumer {
 
   /**
    * Gets the offset of the last message read.
-   *
+   * 
    * @return the offset of the last message read.
    */
   public long getLastOffset() {
@@ -667,7 +667,7 @@ public class LowOverheadConsumer {
 
   /**
    * Gets the offset of the next message that would be returned.
-   *
+   * 
    * @return the offset of the next message that would be returned.
    */
   public long getNextOffset() {

@@ -47,14 +47,14 @@ import com.codahale.metrics.MetricRegistry;
 
 /**
  * An implementation of the Kafka 0.8 producer.
- *
+ * 
  * This class acts as a producer of data to a cluster of Kafka brokers. Each
  * instance only sends data for a single topic, using a single key. If you need
  * to write to more topics (or using different keys), then instantiate more
  * instances.
- *
+ * 
  * This producer is asynchonous only. There is no synchronous mode.
- *
+ * 
  * This class was designed to be very light weight. The standard Java client
  * creates a lot of objects, and therefore causes a lot of garbage collection
  * that leads to a major slowdown in performance. This client creates ver few
@@ -151,7 +151,7 @@ public class LowOverheadProducer {
 
   /**
    * Create a new producer.
-   *
+   * 
    * @param conf
    *          ProducerConfiguration to use
    * @param clientId
@@ -170,7 +170,7 @@ public class LowOverheadProducer {
   /**
    * Create a new producer using a given instance of MetricRegistry instead of
    * the default singleton.
-   *
+   * 
    * @param conf
    *          ProducerConfiguration to use
    * @param clientId
@@ -353,9 +353,9 @@ public class LowOverheadProducer {
 
   /**
    * Add a message to the send queue
-   *
+   * 
    * Takes bytes from buffer from start, up to length bytes.
-   *
+   * 
    * @param buffer
    *          byte array to read from.
    * @param offset
