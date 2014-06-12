@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead;
+package com.blackberry.krackle;
 
 import static org.junit.Assert.assertEquals;
 
@@ -24,12 +24,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
@@ -37,11 +35,11 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.blackberry.kafka.lowoverhead.consumer.ConsumerConfiguration;
-import com.blackberry.kafka.lowoverhead.consumer.LowOverheadConsumer;
-import com.blackberry.kafka.lowoverhead.meta.MetaData;
-import com.blackberry.kafka.lowoverhead.producer.LowOverheadProducer;
-import com.blackberry.kafka.lowoverhead.producer.ProducerConfiguration;
+import com.blackberry.krackle.consumer.ConsumerConfiguration;
+import com.blackberry.krackle.consumer.Consumer;
+import com.blackberry.krackle.meta.MetaData;
+import com.blackberry.krackle.producer.Producer;
+import com.blackberry.krackle.producer.ProducerConfiguration;
 import com.blackberry.testutil.LocalKafkaServer;
 import com.blackberry.testutil.LocalZkServer;
 
@@ -51,14 +49,14 @@ public class KafkaClientTest {
   Throwable error = null;
 
   static LocalZkServer zk;
-  static LocalKafkaServer kafka;
+  static LocalKafkaServer kafkaServer;
 
   static List<String> logs;
 
   @BeforeClass
   public static void setup() throws Exception {
     zk = new LocalZkServer();
-    kafka = new LocalKafkaServer();
+    kafkaServer = new LocalKafkaServer();
 
     logs = new ArrayList<String>();
     for (int i = 0; i < 100000; i++) {
@@ -68,12 +66,12 @@ public class KafkaClientTest {
 
   @AfterClass
   public static void cleanup() throws Exception {
-    kafka.shutdown();
+    kafkaServer.shutdown();
     zk.shutdown();
   }
 
   private void setupTopic(String topic) throws Exception {
-    kafka.createTopic(topic);
+    kafkaServer.createTopic(topic);
 
     // Wait for everything to finish starting up. We do this by checking to
     // ensure all the topics have leaders.
@@ -97,7 +95,8 @@ public class KafkaClientTest {
     }
   }
 
-  private Producer<String, String> getStdProducer(String compression) {
+  private kafka.javaapi.producer.Producer<String, String> getStdProducer(
+      String compression) {
     Properties producerProps = new Properties();
     producerProps.setProperty("metadata.broker.list", "localhost:9876");
     producerProps.setProperty("compression.codec", compression);
@@ -108,12 +107,12 @@ public class KafkaClientTest {
     producerProps.setProperty("serializer.class",
         "kafka.serializer.StringEncoder");
     ProducerConfig producerConf = new ProducerConfig(producerProps);
-    Producer<String, String> producer = new Producer<String, String>(
+    kafka.javaapi.producer.Producer<String, String> producer = new kafka.javaapi.producer.Producer<String, String>(
         producerConf);
     return producer;
   }
 
-  private LowOverheadProducer getLOProducer(String topic, String compression)
+  private Producer getKrackleProducer(String topic, String compression)
       throws Exception {
     Properties producerProps = new Properties();
     producerProps.setProperty("metadata.broker.list", "localhost:9876");
@@ -124,8 +123,8 @@ public class KafkaClientTest {
     producerProps.setProperty("num.buffers", "10");
     ProducerConfiguration producerConf = new ProducerConfiguration(
         producerProps);
-    LowOverheadProducer producer = new LowOverheadProducer(producerConf,
-        "myclient", topic, "mykey", null);
+    Producer producer = new Producer(producerConf, "myclient", topic, "mykey",
+        null);
     return producer;
   }
 
@@ -134,15 +133,15 @@ public class KafkaClientTest {
     props.put("zookeeper.connect", "localhost:21818");
     props.put("group.id", "test");
     ConsumerConfig conf = new ConsumerConfig(props);
-    return Consumer.createJavaConsumerConnector(conf);
+    return kafka.consumer.Consumer.createJavaConsumerConnector(conf);
   }
 
-  private LowOverheadConsumer getLOConsumer(String topic, int partition)
+  private Consumer getKrackleConsumer(String topic, int partition)
       throws Exception {
     Properties props = new Properties();
     props.setProperty("metadata.broker.list", "localhost:9876");
     ConsumerConfiguration conf = new ConsumerConfiguration(props);
-    return new LowOverheadConsumer(conf, "test-client", topic, partition);
+    return new Consumer(conf, "test-client", topic, partition);
   }
 
   // Sanity check. Standard producer and consumer
@@ -179,7 +178,7 @@ public class KafkaClientTest {
       t.start();
       Thread.sleep(100);
 
-      Producer<String, String> producer = getStdProducer(compression);
+      kafka.javaapi.producer.Producer<String, String> producer = getStdProducer(compression);
       for (String log : logs) {
         producer.send(new KeyedMessage<String, String>(topic, "mykey", System
             .currentTimeMillis() + " test 123 " + log));
@@ -193,7 +192,7 @@ public class KafkaClientTest {
   }
 
   @Test
-  public void testLOProducerStdConsumer() throws Throwable {
+  public void testKrackleProducerStdConsumer() throws Throwable {
     for (String compression : COMPRESSION_METHODS) {
       final String topic = "lop-std-" + compression;
       setupTopic(topic);
@@ -225,7 +224,7 @@ public class KafkaClientTest {
       t.start();
       Thread.sleep(100);
 
-      LowOverheadProducer producer = getLOProducer(topic, compression);
+      Producer producer = getKrackleProducer(topic, compression);
       for (String log : logs) {
         byte[] msg = (System.currentTimeMillis() + " test 123 " + log)
             .getBytes();
@@ -240,13 +239,13 @@ public class KafkaClientTest {
   }
 
   @Test
-  public void testStdProducerLOConsumer() throws Throwable {
+  public void testStdProducerKrackleConsumer() throws Throwable {
     for (String compression : COMPRESSION_METHODS) {
 
       final String topic = "std-loc-" + compression;
       setupTopic(topic);
 
-      final LowOverheadConsumer consumer = getLOConsumer(topic, 0);
+      final Consumer consumer = getKrackleConsumer(topic, 0);
 
       error = null;
       Thread t = new Thread(new Runnable() {
@@ -277,7 +276,7 @@ public class KafkaClientTest {
       // waiting a bit of time.
       Thread.sleep(100);
 
-      Producer<String, String> producer = getStdProducer(compression);
+      kafka.javaapi.producer.Producer<String, String> producer = getStdProducer(compression);
       for (String log : logs) {
         producer.send(new KeyedMessage<String, String>(topic, "mykey", System
             .currentTimeMillis() + " test 123 " + log));
@@ -291,17 +290,17 @@ public class KafkaClientTest {
   }
 
   @Test
-  public void testLOProducerLOConsumer() throws Throwable {
+  public void testKrackleProducerKrackleConsumer() throws Throwable {
     for (String compression : COMPRESSION_METHODS) {
       final String topic = "lop-loc-" + compression;
       setupTopic(topic);
 
-      final LowOverheadConsumer consumer = getLOConsumer(topic, 0);
+      final Consumer consumer = getKrackleConsumer(topic, 0);
 
       error = null;
       Thread t = new Thread(new Runnable() {
         @Override
-        public void run() {
+        public void run() {     
           try {
             byte[] bytes = new byte[1024 * 1024];
             String line;
@@ -327,7 +326,7 @@ public class KafkaClientTest {
       // waiting a bit of time.
       Thread.sleep(100);
 
-      LowOverheadProducer producer = getLOProducer(topic, compression);
+      Producer producer = getKrackleProducer(topic, compression);
       for (String log : logs) {
         byte[] msg = (System.currentTimeMillis() + " test 123 " + log)
             .getBytes();

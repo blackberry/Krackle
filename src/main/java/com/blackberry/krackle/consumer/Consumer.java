@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.consumer;
+package com.blackberry.krackle.consumer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,11 +26,11 @@ import java.nio.charset.Charset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.kafka.lowoverhead.Constants;
-import com.blackberry.kafka.lowoverhead.KafkaError;
-import com.blackberry.kafka.lowoverhead.MetricRegistrySingleton;
-import com.blackberry.kafka.lowoverhead.meta.Broker;
-import com.blackberry.kafka.lowoverhead.meta.MetaData;
+import com.blackberry.krackle.Constants;
+import com.blackberry.krackle.KafkaError;
+import com.blackberry.krackle.MetricRegistrySingleton;
+import com.blackberry.krackle.meta.Broker;
+import com.blackberry.krackle.meta.MetaData;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 
@@ -47,9 +47,9 @@ import com.codahale.metrics.MetricRegistry;
  * objects during steady state running, and so avoids all garbage collection
  * overhead.
  */
-public class LowOverheadConsumer {
+public class Consumer {
   private static final Logger LOG = LoggerFactory
-      .getLogger(LowOverheadConsumer.class);
+      .getLogger(Consumer.class);
 
   private static final Charset UTF8 = Charset.forName("UTF8");
 
@@ -115,7 +115,7 @@ public class LowOverheadConsumer {
    * @param partition
    *          id of the partition to read from.
    */
-  public LowOverheadConsumer(ConsumerConfiguration conf, String clientId,
+  public Consumer(ConsumerConfiguration conf, String clientId,
       String topic, int partition) {
     this(conf, clientId, topic, partition, 0L);
   }
@@ -135,7 +135,7 @@ public class LowOverheadConsumer {
    * @param offset
    *          the offset to start reading from.
    */
-  public LowOverheadConsumer(ConsumerConfiguration conf, String clientId,
+  public Consumer(ConsumerConfiguration conf, String clientId,
       String topic, int partition, long offset) {
     this(conf, clientId, topic, partition, offset, null);
   }
@@ -160,7 +160,7 @@ public class LowOverheadConsumer {
    * @param metrics
    *          the instance of MetricRegistry to use for reporting metrics.
    */
-  public LowOverheadConsumer(ConsumerConfiguration conf, String clientId,
+  public Consumer(ConsumerConfiguration conf, String clientId,
       String topic, int partition, long offset, MetricRegistry metrics) {
     LOG.info("Creating consumer for {}-{} from offset {}", topic, partition,
         offset);
@@ -213,34 +213,34 @@ public class LowOverheadConsumer {
     String name = "[" + topic + "-" + partition + "]";
 
     mMessageRequests = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "message requests " + name));
+        Consumer.class, "message requests " + name));
     mMessageRequestsTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "message requests [total]"));
+        Consumer.class, "message requests [total]"));
     mMessagesReturned = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "message returned " + name));
+        Consumer.class, "message returned " + name));
     mMessagesReturnedTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "message returned [total]"));
+        Consumer.class, "message returned [total]"));
     mBytesReturned = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "bytes returned " + name));
+        Consumer.class, "bytes returned " + name));
     mBytesReturnedTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "bytes returned [total]"));
+        Consumer.class, "bytes returned [total]"));
     mMessageRequestsNoData = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "no message returned " + name));
+        Consumer.class, "no message returned " + name));
     mMessageRequestsNoDataTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "no message returned [total]"));
+        Consumer.class, "no message returned [total]"));
 
     mBrokerReadAttempts = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "broker consume attempts " + name));
+        Consumer.class, "broker consume attempts " + name));
     mBrokerReadAttemptsTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "broker consume attempts [total]"));
+        Consumer.class, "broker consume attempts [total]"));
     mBrokerReadSuccess = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "broker consume success " + name));
+        Consumer.class, "broker consume success " + name));
     mBrokerReadSuccessTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "broker consume success [total]"));
+        Consumer.class, "broker consume success [total]"));
     mBrokerReadFailure = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "broker consume failure " + name));
+        Consumer.class, "broker consume failure " + name));
     mBrokerReadFailureTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadConsumer.class, "broker consume failure [total]"));
+        Consumer.class, "broker consume failure [total]"));
   }
 
   private int bytesReturned = 0;

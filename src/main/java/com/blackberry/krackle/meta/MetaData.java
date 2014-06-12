@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.meta;
+package com.blackberry.krackle.meta;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.kafka.lowoverhead.Constants;
+import com.blackberry.krackle.Constants;
 
 /**
  * Gather and store metadata for a topic.

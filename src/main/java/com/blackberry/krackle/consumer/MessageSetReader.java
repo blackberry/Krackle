@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.consumer;
+package com.blackberry.krackle.consumer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,10 +23,10 @@ import java.util.zip.CRC32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.kafka.lowoverhead.Constants;
-import com.blackberry.kafka.lowoverhead.compression.Decompressor;
-import com.blackberry.kafka.lowoverhead.compression.GzipDecompressor;
-import com.blackberry.kafka.lowoverhead.compression.SnappyDecompressor;
+import com.blackberry.krackle.Constants;
+import com.blackberry.krackle.compression.Decompressor;
+import com.blackberry.krackle.compression.GzipDecompressor;
+import com.blackberry.krackle.compression.SnappyDecompressor;
 
 /**
  * Class to read a messages from a message set.

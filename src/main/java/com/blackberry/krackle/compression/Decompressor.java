@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.compression;
+package com.blackberry.krackle.compression;
 
 import java.io.IOException;
 
 /**
- * Interface for compressors used to compress data for sending to the broker.
+ * Interface for decompressors used to compress data for sending to the broker.
  */
-public interface Compressor {
+public interface Decompressor {
   /**
    * Return the attribute value associated with this compression method.
    * 
@@ -30,27 +30,28 @@ public interface Compressor {
   public byte getAttribute();
 
   /**
-   * Compresses the data from the source array into the destination array.
+   * Decompresses the data from the source array into the destination array.
    * 
    * If the destination array is (potentially) not big enough to hold the
-   * compressed data, then the compress method will not compress anything and
-   * return <code>-1</code>.
+   * decompressed data, then the decompress method will not decompress anything
+   * and return <code>-1</code>.
    * 
    * @param src
    *          source byte array.
    * @param srcPos
-   *          start position of data in the source byte array.
+   *          position in source byte array to start from.
    * @param length
-   *          length of data in the source byte array.
+   *          length of data to decompress.
    * @param dest
-   *          destination byte array
+   *          destination byte array.
    * @param destPos
-   *          position in destination byte array to write to
-   * @return the number of bytes written to the destination array, or
-   *         <code>-1</code> if there was not enough room to write the
-   *         compressed data.
+   *          position in destination byte array to write to.
+   * @param maxLength
+   *          max length of decompressed data.
+   * @return the number of bytes written to the destination, or <code>-1</code>
+   *         if maxLength was not big enough to hold the data.
    * @throws IOException
    */
-  public int compress(byte[] src, int srcPos, int length, byte[] dest,
-      int destPos) throws IOException;
+  public int decompress(byte[] src, int srcPos, int length, byte[] dest,
+      int destPos, int maxLength) throws IOException;
 }

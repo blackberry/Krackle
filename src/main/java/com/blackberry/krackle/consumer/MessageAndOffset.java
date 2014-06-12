@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.consumer;
+package com.blackberry.krackle.consumer;
 
 /**
  * A simple class for holding a message as as byte array and an offset as a

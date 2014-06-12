@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.meta;
+package com.blackberry.krackle.meta;
 
 /**
  * Class to hold the id, host and port of a Kafka broker.

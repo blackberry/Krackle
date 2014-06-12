@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.producer;
+package com.blackberry.krackle.producer;
 
 import java.nio.ByteBuffer;
 
@@ -26,9 +26,9 @@ public class MessageSetBuffer {
   private byte[] bytes;
   private ByteBuffer buffer;
   private int batchSize = 0;
-  private LowOverheadProducer producer;
+  private Producer producer;
 
-  public MessageSetBuffer(LowOverheadProducer producer, int size) {
+  public MessageSetBuffer(Producer producer, int size) {
     this.producer = producer;
     this.size = size;
     bytes = new byte[this.size];
@@ -72,11 +72,11 @@ public class MessageSetBuffer {
     this.batchSize = batchSize;
   }
 
-  public LowOverheadProducer getProducer() {
+  public Producer getProducer() {
     return producer;
   }
 
-  public void setProducer(LowOverheadProducer producer) {
+  public void setProducer(Producer producer) {
     this.producer = producer;
   }
 

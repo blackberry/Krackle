@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead;
+package com.blackberry.krackle;
 
 import java.util.concurrent.TimeUnit;
 

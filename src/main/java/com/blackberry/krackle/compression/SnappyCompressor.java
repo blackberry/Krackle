@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.compression;
+package com.blackberry.krackle.compression;
 
 import java.io.IOException;
 
 import org.xerial.snappy.Snappy;
 
-import com.blackberry.kafka.lowoverhead.Constants;
+import com.blackberry.krackle.Constants;
 
 /**
  * Compressor implementation that used the Snappy algorithm.

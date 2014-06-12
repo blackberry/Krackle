@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.producer;
+package com.blackberry.krackle.producer;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.producer;
+package com.blackberry.krackle.producer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,15 +33,15 @@ import java.util.zip.CRC32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.kafka.lowoverhead.Constants;
-import com.blackberry.kafka.lowoverhead.KafkaError;
-import com.blackberry.kafka.lowoverhead.MetricRegistrySingleton;
-import com.blackberry.kafka.lowoverhead.compression.Compressor;
-import com.blackberry.kafka.lowoverhead.compression.GzipCompressor;
-import com.blackberry.kafka.lowoverhead.compression.SnappyCompressor;
-import com.blackberry.kafka.lowoverhead.meta.Broker;
-import com.blackberry.kafka.lowoverhead.meta.MetaData;
-import com.blackberry.kafka.lowoverhead.meta.Topic;
+import com.blackberry.krackle.Constants;
+import com.blackberry.krackle.KafkaError;
+import com.blackberry.krackle.MetricRegistrySingleton;
+import com.blackberry.krackle.compression.Compressor;
+import com.blackberry.krackle.compression.GzipCompressor;
+import com.blackberry.krackle.compression.SnappyCompressor;
+import com.blackberry.krackle.meta.Broker;
+import com.blackberry.krackle.meta.MetaData;
+import com.blackberry.krackle.meta.Topic;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 
@@ -61,9 +61,9 @@ import com.codahale.metrics.MetricRegistry;
  * new objects during steady state running, and so avoids most garbage
  * collection overhead.
  */
-public class LowOverheadProducer {
+public class Producer {
   private static final Logger LOG = LoggerFactory
-      .getLogger(LowOverheadProducer.class);
+      .getLogger(Producer.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
   private ProducerConfiguration conf;
@@ -162,7 +162,7 @@ public class LowOverheadProducer {
    *          key to use for partitioning
    * @throws Exception
    */
-  public LowOverheadProducer(ProducerConfiguration conf, String clientId,
+  public Producer(ProducerConfiguration conf, String clientId,
       String topic, String key) throws Exception {
     this(conf, clientId, topic, key, null);
   }
@@ -183,7 +183,7 @@ public class LowOverheadProducer {
    *          MetricRegistry instance to use for metrics.
    * @throws Exception
    */
-  public LowOverheadProducer(ProducerConfiguration conf, String clientId,
+  public Producer(ProducerConfiguration conf, String clientId,
       String topic, String key, MetricRegistry metrics) throws Exception {
     LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
@@ -248,17 +248,17 @@ public class LowOverheadProducer {
     String name = "[" + topicString + "]";
 
     mReceived = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages received " + name));
+        Producer.class, "total messages received " + name));
     mReceivedTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages received"));
-    mSent = this.metrics.meter(MetricRegistry.name(LowOverheadProducer.class,
+        Producer.class, "total messages received"));
+    mSent = this.metrics.meter(MetricRegistry.name(Producer.class,
         "total messages sent " + name));
     mSentTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages sent"));
+        Producer.class, "total messages sent"));
     mDropped = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages dropped " + name));
+        Producer.class, "total messages dropped " + name));
     mDroppedTotal = this.metrics.meter(MetricRegistry.name(
-        LowOverheadProducer.class, "total messages dropped"));
+        Producer.class, "total messages dropped"));
   }
 
   private void configure() throws Exception {

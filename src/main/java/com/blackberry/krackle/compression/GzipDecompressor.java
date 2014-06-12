@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.compression;
+package com.blackberry.krackle.compression;
 
 import java.io.IOException;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import com.blackberry.kafka.lowoverhead.Constants;
+import com.blackberry.krackle.Constants;
 
 /**
  * Decompressor implementation that used the GZIP algorithm.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead;
+package com.blackberry.krackle;
 
 /**
  * Enum of possible errors and error codes that could be returned by the broker.

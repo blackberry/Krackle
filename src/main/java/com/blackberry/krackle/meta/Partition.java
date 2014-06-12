@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead.meta;
+package com.blackberry.krackle.meta;
 
 import java.util.HashSet;
 import java.util.Set;

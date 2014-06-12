@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.kafka.lowoverhead;
+package com.blackberry.krackle;
 
 /**
  * Constants that are used throughout the client.
