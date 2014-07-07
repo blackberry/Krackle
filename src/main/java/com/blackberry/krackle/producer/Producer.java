@@ -62,8 +62,7 @@ import com.codahale.metrics.MetricRegistry;
  * collection overhead.
  */
 public class Producer {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(Producer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Producer.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
 
   private ProducerConfiguration conf;
@@ -162,8 +161,8 @@ public class Producer {
    *          key to use for partitioning
    * @throws Exception
    */
-  public Producer(ProducerConfiguration conf, String clientId,
-      String topic, String key) throws Exception {
+  public Producer(ProducerConfiguration conf, String clientId, String topic,
+      String key) throws Exception {
     this(conf, clientId, topic, key, null);
   }
 
@@ -183,8 +182,8 @@ public class Producer {
    *          MetricRegistry instance to use for metrics.
    * @throws Exception
    */
-  public Producer(ProducerConfiguration conf, String clientId,
-      String topic, String key, MetricRegistry metrics) throws Exception {
+  public Producer(ProducerConfiguration conf, String clientId, String topic,
+      String key, MetricRegistry metrics) throws Exception {
     LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
     this.conf = conf;
@@ -247,18 +246,18 @@ public class Producer {
   private void initializeMetrics() {
     String name = "[" + topicString + "]";
 
-    mReceived = this.metrics.meter(MetricRegistry.name(
-        Producer.class, "total messages received " + name));
-    mReceivedTotal = this.metrics.meter(MetricRegistry.name(
-        Producer.class, "total messages received"));
+    mReceived = this.metrics.meter(MetricRegistry.name(Producer.class,
+        "messages received " + name));
+    mReceivedTotal = this.metrics.meter(MetricRegistry.name(Producer.class,
+        "messages received [total]"));
     mSent = this.metrics.meter(MetricRegistry.name(Producer.class,
-        "total messages sent " + name));
-    mSentTotal = this.metrics.meter(MetricRegistry.name(
-        Producer.class, "total messages sent"));
-    mDropped = this.metrics.meter(MetricRegistry.name(
-        Producer.class, "total messages dropped " + name));
-    mDroppedTotal = this.metrics.meter(MetricRegistry.name(
-        Producer.class, "total messages dropped"));
+        "messages sent: " + name));
+    mSentTotal = this.metrics.meter(MetricRegistry.name(Producer.class,
+        "messages sent [total]"));
+    mDropped = this.metrics.meter(MetricRegistry.name(Producer.class,
+        "messages dropped " + name));
+    mDroppedTotal = this.metrics.meter(MetricRegistry.name(Producer.class,
+        "messages dropped [total]"));
   }
 
   private void configure() throws Exception {
