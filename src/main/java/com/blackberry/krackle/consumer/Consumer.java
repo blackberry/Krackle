@@ -175,8 +175,6 @@ public class Consumer {
       this.metrics = metrics;
     }
 
-    initializeMetrics();
-
     this.clientId = clientId;
     clientIdBytes = clientId.getBytes(UTF8);
     clientIdLength = (short) clientIdBytes.length;
@@ -187,6 +185,8 @@ public class Consumer {
 
     this.partition = partition;
     this.offset = offset;
+
+    initializeMetrics();
 
     offsetRequestBytes = new byte[44 + clientIdLength + topicLength];
     offsetRequestBuffer = ByteBuffer.wrap(offsetRequestBytes);
