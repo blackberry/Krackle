@@ -409,7 +409,7 @@ public class Producer {
       }
 
       if (activeMessageSetBuffer == null) {
-        LOG.info("Buffer full.  Dropping message.");
+        LOG.debug("Buffer full.  Dropping message.");
         return;
       }
     }

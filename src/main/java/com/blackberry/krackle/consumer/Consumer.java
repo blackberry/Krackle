@@ -438,7 +438,7 @@ public class Consumer {
       while (bytesRead < responseLength) {
         bytesRead += brokerIn.read(offsetResponseBytes, bytesRead,
             responseLength - bytesRead);
-        LOG.info("Read {} bytes", bytesRead);
+        LOG.debug("Read {} bytes", bytesRead);
       }
       offsetResponseBuffer.clear();
 

@@ -40,9 +40,9 @@ public class MessageSetReader {
   private byte[] bytes = new byte[0];
   private ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
-  // This starts at 1KiB, and doubles as necessary. I doubt it will need to do
+  // This starts at 256KiB, and doubles as necessary. I doubt it will need to do
   // so often, unless message sizes keep growing in an unbounded way.
-  private byte[] decompressionBytes = new byte[1024];
+  private byte[] decompressionBytes = new byte[256 * 1024];
 
   private CRC32 crc32 = new CRC32();
 
@@ -221,7 +221,7 @@ public class MessageSetReader {
       if (decompressedSize == -1) {
         // Our output buffer was not big enough. So increase our
         // buffers and retry. This should be very rare.
-        LOG.info("Expanding decompression buffer from {} to {}",
+        LOG.debug("Expanding decompression buffer from {} to {}",
             decompressionBytes.length, 2 * decompressionBytes.length);
         decompressionBytes = new byte[2 * decompressionBytes.length];
       } else {
