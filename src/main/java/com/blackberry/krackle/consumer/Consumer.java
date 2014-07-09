@@ -48,8 +48,7 @@ import com.codahale.metrics.MetricRegistry;
  * overhead.
  */
 public class Consumer {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(Consumer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Consumer.class);
 
   private static final Charset UTF8 = Charset.forName("UTF8");
 
@@ -69,6 +68,7 @@ public class Consumer {
 
   private long offset;
   private long lastOffset;
+  private long highWaterMark;
 
   private byte[] offsetRequestBytes;
   private ByteBuffer offsetRequestBuffer;
@@ -115,8 +115,8 @@ public class Consumer {
    * @param partition
    *          id of the partition to read from.
    */
-  public Consumer(ConsumerConfiguration conf, String clientId,
-      String topic, int partition) {
+  public Consumer(ConsumerConfiguration conf, String clientId, String topic,
+      int partition) {
     this(conf, clientId, topic, partition, 0L);
   }
 
@@ -135,8 +135,8 @@ public class Consumer {
    * @param offset
    *          the offset to start reading from.
    */
-  public Consumer(ConsumerConfiguration conf, String clientId,
-      String topic, int partition, long offset) {
+  public Consumer(ConsumerConfiguration conf, String clientId, String topic,
+      int partition, long offset) {
     this(conf, clientId, topic, partition, offset, null);
   }
 
@@ -160,8 +160,8 @@ public class Consumer {
    * @param metrics
    *          the instance of MetricRegistry to use for reporting metrics.
    */
-  public Consumer(ConsumerConfiguration conf, String clientId,
-      String topic, int partition, long offset, MetricRegistry metrics) {
+  public Consumer(ConsumerConfiguration conf, String clientId, String topic,
+      int partition, long offset, MetricRegistry metrics) {
     LOG.info("Creating consumer for {}-{} from offset {}", topic, partition,
         offset);
 
@@ -212,16 +212,16 @@ public class Consumer {
 
     String name = "[" + topic + "-" + partition + "]";
 
-    mMessageRequests = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "message requests " + name));
+    mMessageRequests = this.metrics.meter(MetricRegistry.name(Consumer.class,
+        "message requests " + name));
     mMessageRequestsTotal = this.metrics.meter(MetricRegistry.name(
         Consumer.class, "message requests [total]"));
-    mMessagesReturned = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "message returned " + name));
+    mMessagesReturned = this.metrics.meter(MetricRegistry.name(Consumer.class,
+        "message returned " + name));
     mMessagesReturnedTotal = this.metrics.meter(MetricRegistry.name(
         Consumer.class, "message returned [total]"));
-    mBytesReturned = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "bytes returned " + name));
+    mBytesReturned = this.metrics.meter(MetricRegistry.name(Consumer.class,
+        "bytes returned " + name));
     mBytesReturnedTotal = this.metrics.meter(MetricRegistry.name(
         Consumer.class, "bytes returned [total]"));
     mMessageRequestsNoData = this.metrics.meter(MetricRegistry.name(
@@ -233,12 +233,12 @@ public class Consumer {
         Consumer.class, "broker consume attempts " + name));
     mBrokerReadAttemptsTotal = this.metrics.meter(MetricRegistry.name(
         Consumer.class, "broker consume attempts [total]"));
-    mBrokerReadSuccess = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "broker consume success " + name));
+    mBrokerReadSuccess = this.metrics.meter(MetricRegistry.name(Consumer.class,
+        "broker consume success " + name));
     mBrokerReadSuccessTotal = this.metrics.meter(MetricRegistry.name(
         Consumer.class, "broker consume success [total]"));
-    mBrokerReadFailure = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "broker consume failure " + name));
+    mBrokerReadFailure = this.metrics.meter(MetricRegistry.name(Consumer.class,
+        "broker consume failure " + name));
     mBrokerReadFailureTotal = this.metrics.meter(MetricRegistry.name(
         Consumer.class, "broker consume failure [total]"));
   }
@@ -601,8 +601,8 @@ public class Consumer {
             + KafkaError.getMessage(errorCode));
       }
 
-      // Highwatermark offset. I don't care about this for now.
-      responseBuffer.position(responseBuffer.position() + 8);
+      // Highwatermark offset.
+      highWaterMark = responseBuffer.getLong();
 
       // Message set size
       messageSetSize = responseBuffer.getInt();
@@ -671,6 +671,15 @@ public class Consumer {
    */
   public long getNextOffset() {
     return offset;
+  }
+
+  /**
+   * Get the last high watermark we received from Kafka.
+   * 
+   * @return the last high watermark (highest offset)
+   */
+  public long getHighWaterMark() {
+    return highWaterMark;
   }
 
 }
