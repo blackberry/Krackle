@@ -244,20 +244,21 @@ public class Producer {
   }
 
   private void initializeMetrics() {
-    String name = "[" + topicString + "]";
+    String name = topicString;
 
-    mReceived = this.metrics.meter(MetricRegistry.name(Producer.class,
-        "messages received " + name));
-    mReceivedTotal = this.metrics.meter(MetricRegistry.name(Producer.class,
-        "messages received [total]"));
-    mSent = this.metrics.meter(MetricRegistry.name(Producer.class,
-        "messages sent: " + name));
-    mSentTotal = this.metrics.meter(MetricRegistry.name(Producer.class,
-        "messages sent [total]"));
-    mDropped = this.metrics.meter(MetricRegistry.name(Producer.class,
-        "messages dropped " + name));
-    mDroppedTotal = this.metrics.meter(MetricRegistry.name(Producer.class,
-        "messages dropped [total]"));
+    mReceived = this.metrics.meter("krackle:producer:topics:" + name
+        + ":messages received");
+    mReceivedTotal = this.metrics
+        .meter("krackle:producer:total:messages received");
+
+    mSent = this.metrics.meter("krackle:producer:topics:" + name
+        + ":messages sent");
+    mSentTotal = this.metrics.meter("krackle:producer:total:messages sent");
+
+    mDropped = this.metrics.meter("krackle:producer:topics:" + name
+        + ":messages dropped");
+    mDroppedTotal = this.metrics
+        .meter("krackle:producer:total:messages dropped");
   }
 
   private void configure() throws Exception {

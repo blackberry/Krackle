@@ -210,37 +210,42 @@ public class Consumer {
 
   private void initializeMetrics() {
 
-    String name = "[" + topic + "-" + partition + "]";
+    String name = topic + "-" + partition;
 
-    mMessageRequests = this.metrics.meter(MetricRegistry.name(Consumer.class,
-        "message requests " + name));
-    mMessageRequestsTotal = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "message requests [total]"));
-    mMessagesReturned = this.metrics.meter(MetricRegistry.name(Consumer.class,
-        "message returned " + name));
-    mMessagesReturnedTotal = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "message returned [total]"));
-    mBytesReturned = this.metrics.meter(MetricRegistry.name(Consumer.class,
-        "bytes returned " + name));
-    mBytesReturnedTotal = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "bytes returned [total]"));
-    mMessageRequestsNoData = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "no message returned " + name));
-    mMessageRequestsNoDataTotal = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "no message returned [total]"));
+    mMessageRequests = this.metrics.meter("krackle:consumer:partitions:" + name
+        + ":message requests");
+    mMessageRequestsTotal = this.metrics
+        .meter("krackle:consumer:total:message requests");
 
-    mBrokerReadAttempts = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "broker consume attempts " + name));
-    mBrokerReadAttemptsTotal = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "broker consume attempts [total]"));
-    mBrokerReadSuccess = this.metrics.meter(MetricRegistry.name(Consumer.class,
-        "broker consume success " + name));
-    mBrokerReadSuccessTotal = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "broker consume success [total]"));
-    mBrokerReadFailure = this.metrics.meter(MetricRegistry.name(Consumer.class,
-        "broker consume failure " + name));
-    mBrokerReadFailureTotal = this.metrics.meter(MetricRegistry.name(
-        Consumer.class, "broker consume failure [total]"));
+    mMessagesReturned = this.metrics.meter("krackle:consumer:partitions:"
+        + name + ":message returned");
+    mMessagesReturnedTotal = this.metrics
+        .meter("krackle:consumer:total:message returned");
+
+    mBytesReturned = this.metrics.meter("krackle:consumer:partitions:" + name
+        + ":bytes returned");
+    mBytesReturnedTotal = this.metrics
+        .meter("krackle:consumer:total:bytes returned");
+
+    mMessageRequestsNoData = this.metrics.meter("krackle:consumer:partitions:"
+        + name + ":no message returned");
+    mMessageRequestsNoDataTotal = this.metrics
+        .meter("krackle:consumer:total:no message returned");
+
+    mBrokerReadAttempts = this.metrics.meter("krackle:consumer:partitions:"
+        + name + ":broker consume attempts");
+    mBrokerReadAttemptsTotal = this.metrics
+        .meter("krackle:consumer:total:broker consume attempts");
+
+    mBrokerReadSuccess = this.metrics.meter("krackle:consumer:partitions:"
+        + name + ":broker consume success");
+    mBrokerReadSuccessTotal = this.metrics
+        .meter("krackle:consumer:total:broker consume success");
+
+    mBrokerReadFailure = this.metrics.meter("krackle:consumer:partitions:"
+        + name + ":broker consume failure");
+    mBrokerReadFailureTotal = this.metrics
+        .meter("krackle:consumer:total:broker consume failure");
   }
 
   private int bytesReturned = 0;
