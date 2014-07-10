@@ -380,7 +380,8 @@ public class Producer {
       }
 
       if (activeMessageSetBuffer == null) {
-        LOG.info("Buffer full.  Dropping message.");
+        mDropped.mark();
+        mDroppedTotal.mark();
         return;
       }
     }
@@ -410,7 +411,8 @@ public class Producer {
       }
 
       if (activeMessageSetBuffer == null) {
-        LOG.debug("Buffer full.  Dropping message.");
+        mDropped.mark();
+        mDroppedTotal.mark();
         return;
       }
     }
