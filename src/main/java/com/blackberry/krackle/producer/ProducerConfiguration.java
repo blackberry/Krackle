@@ -126,6 +126,14 @@ import org.slf4j.LoggerFactory;
  * </tr>
  * 
  * <tr>
+ * <td>use.shared.buffers</td>
+ * <td>false</td>
+ * <td>If this is set to true, then there will be one set of buffers that is
+ * used by all Producer instances. In that case, ensure that num.buffers is
+ * large enough to accommodate this.</td>
+ * </tr>
+ * 
+ * <tr>
  * <td>num.buffers</td>
  * <td>2</td>
  * <td>The number of buffers to use. At any given time, there is up to one
@@ -133,8 +141,11 @@ import org.slf4j.LoggerFactory;
  * the broker, and any number of buffers waiting to be filled and/or sent.
  * 
  * Essentially, the limit of the amount of data that can be queued at at any
- * given time is message.buffer.size * num.buffers. Although, in reality, you
- * won't get buffers to 100% full each time.</td>
+ * given time is message.buffer.size num.buffers. Although, in reality, you
+ * won't get buffers to 100% full each time.
+ * 
+ * If use.shared.buffers=false, then this many buffers will be allocated per
+ * Producer. If use.shared.buffers=true then this is the total for the JVM.</td>
  * </tr>
  * 
  * <tr>
@@ -197,6 +208,7 @@ public class ProducerConfiguration {
   private int numBuffers;
   private int sendBufferSize;
   private int compressionLevel;
+  private boolean useSharedBuffers;
 
   public ProducerConfiguration(Properties props) throws Exception {
     LOG.info("Building configuration.");
@@ -270,6 +282,10 @@ public class ProducerConfiguration {
           + messageBufferSize);
     }
     LOG.info("message.buffer.size = {}", messageBufferSize);
+
+    useSharedBuffers = Boolean.parseBoolean(props.getProperty(
+        "use.shared.buffers", "false"));
+    LOG.info("use.shared.buffers = {}", useSharedBuffers);
 
     numBuffers = Integer.parseInt(props.getProperty("num.buffers", "2"));
     if (numBuffers < 2) {
@@ -370,6 +386,14 @@ public class ProducerConfiguration {
 
   public void setMessageBufferSize(int messageBufferSize) {
     this.messageBufferSize = messageBufferSize;
+  }
+
+  public boolean isUseSharedBuffers() {
+    return useSharedBuffers;
+  }
+
+  public void setUseSharedBuffers(boolean useSharedBuffers) {
+    this.useSharedBuffers = useSharedBuffers;
   }
 
   public int getNumBuffers() {

@@ -42,7 +42,10 @@ import com.blackberry.krackle.compression.SnappyCompressor;
 import com.blackberry.krackle.meta.Broker;
 import com.blackberry.krackle.meta.MetaData;
 import com.blackberry.krackle.meta.Topic;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Meter;
+import com.codahale.metrics.Metric;
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 
 /**
@@ -90,7 +93,10 @@ public class Producer {
 
   // Store the uncompressed message set that we will be compressing later.
   private int numBuffers;
-  private BlockingQueue<MessageSetBuffer> freeBuffers;
+  private BlockingQueue<MessageSetBuffer> freeBuffers = null;
+  private static final Object sharedBufferLock = new Object();
+  private static BlockingQueue<MessageSetBuffer> sharedBuffers = null;
+
   private BlockingQueue<MessageSetBuffer> buffersToSend;
 
   // Store the compressed message + headers.
@@ -145,8 +151,12 @@ public class Producer {
   private Meter mReceivedTotal = null;
   private Meter mSent = null;
   private Meter mSentTotal = null;
-  private Meter mDropped = null;
-  private Meter mDroppedTotal = null;
+  private Meter mDroppedQueueFull = null;
+  private Meter mDroppedQueueFullTotal = null;
+  private Meter mDroppedSendFail = null;
+  private Meter mDroppedSendFailTotal = null;
+
+  private String freeBufferGaugeName;
 
   /**
    * Create a new producer.
@@ -255,10 +265,15 @@ public class Producer {
         + ":messages sent");
     mSentTotal = this.metrics.meter("krackle:producer:total:messages sent");
 
-    mDropped = this.metrics.meter("krackle:producer:topics:" + name
-        + ":messages dropped");
-    mDroppedTotal = this.metrics
-        .meter("krackle:producer:total:messages dropped");
+    mDroppedQueueFull = this.metrics.meter("krackle:producer:topics:" + name
+        + ":messages dropped (queue full)");
+    mDroppedQueueFullTotal = this.metrics
+        .meter("krackle:producer:total:messages dropped (queue full)");
+
+    mDroppedSendFail = this.metrics.meter("krackle:producer:topics:" + name
+        + ":messages dropped (send failure)");
+    mDroppedSendFailTotal = this.metrics
+        .meter("krackle:producer:total:messages dropped (send failure)");
   }
 
   private void configure() throws Exception {
@@ -275,11 +290,57 @@ public class Producer {
 
     int messageBufferSize = conf.getMessageBufferSize();
     numBuffers = conf.getNumBuffers();
-    freeBuffers = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
-    buffersToSend = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
-    for (int i = 0; i < numBuffers; i++) {
-      freeBuffers.add(new MessageSetBuffer(this, messageBufferSize));
+
+    // Check to see if we're using a shared buffer, or dedicated buffers.
+    if (conf.isUseSharedBuffers()) {
+      synchronized (sharedBufferLock) {
+        if (sharedBuffers == null) {
+          sharedBuffers = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
+          for (int i = 0; i < numBuffers; i++) {
+            sharedBuffers.add(new MessageSetBuffer(this, messageBufferSize));
+          }
+
+          MetricRegistrySingleton
+              .getInstance()
+              .getMetricsRegistry()
+              .register("krackle:producer:shared free buffers",
+                  new Gauge<Integer>() {
+                    @Override
+                    public Integer getValue() {
+                      return sharedBuffers.size();
+                    }
+                  });
+        }
+      }
+      freeBuffers = sharedBuffers;
+    } else {
+      freeBuffers = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
+      for (int i = 0; i < numBuffers; i++) {
+        freeBuffers.add(new MessageSetBuffer(this, messageBufferSize));
+      }
+
+      freeBufferGaugeName = "krackle:producer:topics:" + topicString
+          + ":free buffers";
+      if (MetricRegistrySingleton.getInstance().getMetricsRegistry()
+          .getGauges(new MetricFilter() {
+            @Override
+            public boolean matches(String s, Metric m) {
+              return s.equals(freeBufferGaugeName);
+            }
+          }).size() > 0) {
+        LOG.warn("Gauge already exists for '{}'", freeBufferGaugeName);
+      } else {
+        MetricRegistrySingleton.getInstance().getMetricsRegistry()
+            .register(freeBufferGaugeName, new Gauge<Integer>() {
+              @Override
+              public Integer getValue() {
+                return freeBuffers.size();
+              }
+            });
+      }
     }
+
+    buffersToSend = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
 
     toSendBytes = new byte[sendBufferSize];
     toSendBuffer = ByteBuffer.wrap(toSendBytes);
@@ -380,8 +441,8 @@ public class Producer {
       }
 
       if (activeMessageSetBuffer == null) {
-        mDropped.mark();
-        mDroppedTotal.mark();
+        mDroppedQueueFull.mark();
+        mDroppedQueueFullTotal.mark();
         return;
       }
     }
@@ -411,8 +472,8 @@ public class Producer {
       }
 
       if (activeMessageSetBuffer == null) {
-        mDropped.mark();
-        mDroppedTotal.mark();
+        mDroppedQueueFull.mark();
+        mDroppedQueueFullTotal.mark();
         return;
       }
     }
@@ -623,8 +684,8 @@ public class Producer {
           }
         } else {
           LOG.error("Request failed. No more retries (data lost).", t);
-          mDropped.mark(messageSetBuffer.getBatchSize());
-          mDroppedTotal.mark(messageSetBuffer.getBatchSize());
+          mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
+          mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
         }
 
       }
@@ -665,6 +726,11 @@ public class Producer {
       senderThread.join();
     } catch (InterruptedException e) {
       LOG.error("Error shutting down sender and loader threads.", e);
+    }
+
+    if (conf.isUseSharedBuffers() == false) {
+      MetricRegistrySingleton.getInstance().getMetricsRegistry()
+          .remove(freeBufferGaugeName);
     }
   }
 
