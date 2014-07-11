@@ -150,7 +150,7 @@ import org.slf4j.LoggerFactory;
  * 
  * <tr>
  * <td>send.buffer.size</td>
- * <td>message.buffer.size + 200</td>
+ * <td>1.5*1024*1024</td>
  * <td>Size of the byte buffer used to store the final (with headers and
  * compression applied) data to be sent to the broker.</td>
  * </tr>
@@ -294,11 +294,10 @@ public class ProducerConfiguration {
     LOG.info("num.buffers = {}", numBuffers);
 
     sendBufferSize = Integer.parseInt(props.getProperty("send.buffer.size", ""
-        + (messageBufferSize + 200)));
+        + (int) (1.5 * 1024 * 1024)));
     if (sendBufferSize < 1) {
-      throw new Exception(
-          "message.send.max.retries must be greater than 0.  Got "
-              + sendBufferSize);
+      throw new Exception("send.buffer.size must be greater than 0.  Got "
+          + sendBufferSize);
     }
     LOG.info("send.buffer.size = {}", sendBufferSize);
 
