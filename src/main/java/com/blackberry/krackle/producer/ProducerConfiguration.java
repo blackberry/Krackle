@@ -284,7 +284,7 @@ public class ProducerConfiguration {
     LOG.info("message.buffer.size = {}", messageBufferSize);
 
     useSharedBuffers = Boolean.parseBoolean(props.getProperty(
-        "use.shared.buffers", "false"));
+        "use.shared.buffers", "false").trim());
     LOG.info("use.shared.buffers = {}", useSharedBuffers);
 
     numBuffers = Integer.parseInt(props.getProperty("num.buffers", "2"));
