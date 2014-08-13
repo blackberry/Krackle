@@ -104,6 +104,7 @@ public class MetaData {
     for (HostAndPort hnp : seedBrokers) {
       try {
         sock = new Socket(hnp.host, hnp.port);
+        sock.setSoTimeout(5000);
       } catch (UnknownHostException e) {
         LOG.warn("Unknown host: {}", hnp.host);
         continue;
