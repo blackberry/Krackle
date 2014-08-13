@@ -409,6 +409,7 @@ public class Producer {
       try {
         socket = new Socket(broker.getHost(), broker.getPort());
         socket.setSendBufferSize(conf.getSendBufferSize());
+        socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
         LOG.info("Connected to {}", socket);
         in = socket.getInputStream();
         out = socket.getOutputStream();
