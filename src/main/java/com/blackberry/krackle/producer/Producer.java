@@ -75,6 +75,8 @@ public class Producer {
   private short clientIdLength;
 
   private String keyString;
+  private boolean rotatePartitions;
+  private int partitionModifier;
   private byte[] keyBytes;
   private int keyLength;
 
@@ -173,9 +175,49 @@ public class Producer {
    */
   public Producer(ProducerConfiguration conf, String clientId, String topic,
       String key) throws Exception {
-    this(conf, clientId, topic, key, null);
+    this(conf, clientId, topic, key, false, null);
   }
 
+  /**
+   * Create a new producer.
+   * 
+   * @param conf
+   *          ProducerConfiguration to use
+   * @param clientId
+   *          client id to send to the brokers
+   * @param topic
+   *          topic to produce on
+   * @param key
+   *          key to use for partitioning
+   * @param rotatePartitions
+   *          Whether we rotate partitions or not
+   * @throws Exception
+   */
+  public Producer(ProducerConfiguration conf, String clientId, String topic,
+      String key, boolean rotatePartitions) throws Exception {
+    this(conf, clientId, topic, key, rotatePartitions, null);
+  }
+  
+  /**
+  * Create a new producer.
+  * 
+  * @param conf
+  *          ProducerConfiguration to use
+  * @param clientId
+  *          client id to send to the brokers
+  * @param topic
+  *          topic to produce on
+  * @param key
+  *          key to use for partitioning
+  * @param rotatePartitions
+  *          Whether we rotate partitions or not
+  * @throws Exception
+  */
+ public Producer(ProducerConfiguration conf, String clientId, String topic,
+     String key, MetricRegistry metrics) throws Exception {
+   this(conf, clientId, topic, key, false, metrics);
+ }
+  
   /**
    * Create a new producer using a given instance of MetricRegistry instead of
    * the default singleton.
@@ -193,7 +235,7 @@ public class Producer {
    * @throws Exception
    */
   public Producer(ProducerConfiguration conf, String clientId, String topic,
-      String key, MetricRegistry metrics) throws Exception {
+      String key, boolean rotatePartitions, MetricRegistry metrics) throws Exception {
     LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
     this.conf = conf;
@@ -209,6 +251,9 @@ public class Producer {
     this.keyString = key;
     this.keyBytes = key.getBytes(UTF8);
     this.keyLength = keyBytes.length;
+    
+    this.rotatePartitions = rotatePartitions;
+    this.partitionModifier = 0;
 
     if (metrics == null) {
       this.metrics = MetricRegistrySingleton.getInstance().getMetricsRegistry();
@@ -385,7 +430,12 @@ public class Producer {
 
     Topic topic = metadata.getTopic(topicString);
 
-    partition = Math.abs(keyString.hashCode()) % topic.getNumPartitions();
+    // If we have rotateParitions set, add one to the modifier
+    if(rotatePartitions) {
+    	partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+    }
+    
+    partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
     LOG.info("Sending to partition {} of {}", partition,
         topic.getNumPartitions());
 
