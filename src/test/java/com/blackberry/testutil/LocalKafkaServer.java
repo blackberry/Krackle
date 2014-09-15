@@ -29,7 +29,7 @@ import org.apache.commons.io.FileUtils;
 public class LocalKafkaServer {
   private String nodeId = "0";
   private String port = "9876";
-  private String logDir = FileUtils.getTempDirectoryPath() + "kafka.log";
+  private String logDir = FileUtils.getTempDirectoryPath() + "/kafka.log";
   private String zkConnect = "localhost:21818";
   private KafkaServerStartable server;
 
