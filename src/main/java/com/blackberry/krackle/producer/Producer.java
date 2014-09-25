@@ -431,7 +431,7 @@ public class Producer {
     Topic topic = metadata.getTopic(topicString);
 
     // If we have rotateParitions set, add one to the modifier
-    if(rotatePartitions) {
+    if(rotatePartitions && !force) {
     	partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
     }
     
