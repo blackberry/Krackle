@@ -77,6 +77,9 @@ public class Producer {
   private String keyString;
   private boolean rotatePartitions;
   private int partitionModifier;
+  private boolean quickRotate;
+  private long quickRotateMessageBlocks;
+  private int quickRotateMessageBlocksModifier;
   private byte[] keyBytes;
   private int keyLength;
 
@@ -175,7 +178,7 @@ public class Producer {
    */
   public Producer(ProducerConfiguration conf, String clientId, String topic,
       String key) throws Exception {
-    this(conf, clientId, topic, key, false, null);
+    this(conf, clientId, topic, key, false, false, 0, null);
   }
 
   /**
@@ -195,7 +198,7 @@ public class Producer {
    */
   public Producer(ProducerConfiguration conf, String clientId, String topic,
       String key, boolean rotatePartitions) throws Exception {
-    this(conf, clientId, topic, key, rotatePartitions, null);
+    this(conf, clientId, topic, key, rotatePartitions, false, 0, null);
   }
   
   /**
@@ -209,15 +212,40 @@ public class Producer {
   *          topic to produce on
   * @param key
   *          key to use for partitioning
-  * @param rotatePartitions
-  *          Whether we rotate partitions or not
+  * @param metrics
+  *          MetricRegistry instance to use for metrics.
   * @throws Exception
   */
  public Producer(ProducerConfiguration conf, String clientId, String topic,
      String key, MetricRegistry metrics) throws Exception {
-   this(conf, clientId, topic, key, false, metrics);
+   this(conf, clientId, topic, key, false, false, 0, metrics);
  }
-  
+ 
+ /**
+  * Create a new producer using a given instance of MetricRegistry instead of
+  * the default singleton.
+  * 
+  * @param conf
+  *          ProducerConfiguration to use
+  * @param clientId
+  *          client id to send to the brokers
+  * @param topic
+  *          topic to produce on
+  * @param key
+  *          key to use for partitioning
+  * @param rotatePartitions
+  *          Whether we rotate partitions or not
+  * @param quickRotate
+  * 		 Whether we quickly rotate partitions or not
+  * @param quickRotateMessageBlocks
+  * 		 The number of message blocks before rotating
+  * @throws Exception
+  */
+ public Producer(ProducerConfiguration conf, String clientId, String topic,
+     String key, boolean rotatePartitions, boolean quickRotate, long quickRotateMessageBlocks) throws Exception {
+	 this(conf, clientId, topic, key, rotatePartitions, quickRotate, quickRotateMessageBlocks, null);
+ }
+ 
   /**
    * Create a new producer using a given instance of MetricRegistry instead of
    * the default singleton.
@@ -230,12 +258,15 @@ public class Producer {
    *          topic to produce on
    * @param key
    *          key to use for partitioning
+   * @param rotatePartitions
+   *          Whether we rotate partitions or not
    * @param metrics
    *          MetricRegistry instance to use for metrics.
    * @throws Exception
    */
   public Producer(ProducerConfiguration conf, String clientId, String topic,
-      String key, boolean rotatePartitions, MetricRegistry metrics) throws Exception {
+      String key, boolean rotatePartitions, boolean quickRotate, long quickRotateMessageBlocks, 
+      MetricRegistry metrics) throws Exception {
     LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
     this.conf = conf;
@@ -253,7 +284,10 @@ public class Producer {
     this.keyLength = keyBytes.length;
     
     this.rotatePartitions = rotatePartitions;
+    this.quickRotate = quickRotate;
+    this.quickRotateMessageBlocks = quickRotateMessageBlocks;
     this.partitionModifier = 0;
+    this.quickRotateMessageBlocksModifier = 1;
 
     if (metrics == null) {
       this.metrics = MetricRegistrySingleton.getInstance().getMetricsRegistry();
@@ -583,6 +617,22 @@ public class Producer {
       // New message, new id
       correlationId++;
 
+      /*
+       * If quickRotate is enabled, and correlationId is greater than quickRotateMessageBlocks * modifier,
+       * and our current time minus the last metadata refresh is greater than 30 seconds, we will 
+       * rotate the partition.
+       */
+      if(quickRotate 
+    		  && (correlationId > (quickRotateMessageBlocks * quickRotateMessageBlocksModifier))
+    		  && (System.currentTimeMillis() - lastMetadataRefresh > 30000)) {
+    	  
+    	  Topic topic = metadata.getTopic(topicString);
+    	  quickRotateMessageBlocksModifier++;
+
+    	  partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+    	  partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
+      }
+      
       /* headers */
       // Skip 4 bytes for the size
       toSendBuffer.position(4);
@@ -827,9 +877,9 @@ public class Producer {
           if (buffer == null) {
             continue;
           }
-
+          
           sendMessage(buffer);
-
+          
           buffer.clear();
           freeBuffers.add(buffer);
 

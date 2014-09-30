@@ -20,7 +20,7 @@ limitations under the License.
 
   <groupId>com.blackberry.krackle</groupId>
   <artifactId>krackle</artifactId>
-  <version>0.7.4</version>
+  <version>0.7.5</version>
   <packaging>jar</packaging>
 
   <name>krackle</name>
@@ -102,6 +102,7 @@ limitations under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
         <executions>
           <execution>
             <id>attach-javadocs</id>
