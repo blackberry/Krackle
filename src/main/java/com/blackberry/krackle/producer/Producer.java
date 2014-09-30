@@ -79,7 +79,6 @@ public class Producer {
   private int partitionModifier;
   private boolean quickRotate;
   private long quickRotateMessageBlocks;
-  private int quickRotateMessageBlocksModifier;
   private byte[] keyBytes;
   private int keyLength;
 
@@ -121,6 +120,7 @@ public class Producer {
 
   // Stuff for internal use
   private int correlationId = 0;
+  private int lastCorrelationId;
   private int messageSetSizePos;
   private int messageSizePos;
   private int messageCompressedSize;
@@ -287,7 +287,7 @@ public class Producer {
     this.quickRotate = quickRotate;
     this.quickRotateMessageBlocks = quickRotateMessageBlocks;
     this.partitionModifier = 0;
-    this.quickRotateMessageBlocksModifier = 1;
+    this.lastCorrelationId = correlationId;
 
     if (metrics == null) {
       this.metrics = MetricRegistrySingleton.getInstance().getMetricsRegistry();
@@ -467,6 +467,7 @@ public class Producer {
     // If we have rotateParitions set, add one to the modifier
     if(rotatePartitions && !force) {
     	partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+    	lastCorrelationId = correlationId;
     }
     
     partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
@@ -617,22 +618,6 @@ public class Producer {
       // New message, new id
       correlationId++;
 
-      /*
-       * If quickRotate is enabled, and correlationId is greater than quickRotateMessageBlocks * modifier,
-       * and our current time minus the last metadata refresh is greater than 30 seconds, we will 
-       * rotate the partition.
-       */
-      if(quickRotate 
-    		  && (correlationId > (quickRotateMessageBlocks * quickRotateMessageBlocksModifier))
-    		  && (System.currentTimeMillis() - lastMetadataRefresh > 30000)) {
-    	  
-    	  Topic topic = metadata.getTopic(topicString);
-    	  quickRotateMessageBlocksModifier++;
-
-    	  partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
-    	  partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
-      }
-      
       /* headers */
       // Skip 4 bytes for the size
       toSendBuffer.position(4);
@@ -814,8 +799,11 @@ public class Producer {
       mSentTotal.mark(messageSetBuffer.getBatchSize());
 
       // Periodic metadata refreshes.
-      if (topicMetadataRefreshIntervalMs >= 0
-          && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs) {
+      if ((topicMetadataRefreshIntervalMs >= 0
+          && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs) 
+          || (quickRotate 
+        		  && (correlationId - lastCorrelationId > quickRotateMessageBlocks)
+        		  && (System.currentTimeMillis() - lastMetadataRefresh > 30000))) {
         try {
           updateMetaDataAndConnection(false);
         } catch (Throwable t) {
