@@ -778,15 +778,15 @@ public class Producer {
 
           retry++;
           if (retry <= retries) {
-            LOG.warn("Request failed. Retrying {} more times.", retries - retry
-                + 1, t);
+            LOG.warn("Request failed. Retrying {} more times for {}.", retries - retry
+                + 1, topicString, t);
             try {
               Thread.sleep(retryBackoffMs);
             } catch (InterruptedException e) {
               // Do nothing
             }
           } else {
-            LOG.error("Request failed. No more retries (data lost).", t);
+            LOG.error("Request failed. No more retries (data lost) for {}.", topicString, t);
             mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
             mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
           }
