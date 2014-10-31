@@ -252,6 +252,8 @@ public class Consumer
 
 		lastOffset = messageSetReader.getOffset();
 		offset = messageSetReader.getNextOffset();
+		
+		//LOG.info("message received from messageSetReader latOffset {} offset {}" , lastOffset, offset);
 
 		mMessagesReturned.mark();
 		mMessagesReturnedTotal.mark();
@@ -324,7 +326,7 @@ public class Consumer
 		}
 	}
 
-	private long getEarliestOffset()
+	public long getEarliestOffset()
 	{
 		try
 		{
@@ -339,7 +341,7 @@ public class Consumer
 		return 0L;
 	}
 
-	private long getLatestOffset()
+	public long getLatestOffset()
 	{
 		try
 		{
@@ -598,6 +600,8 @@ public class Consumer
 
 			// Next is the high watermark
 			highWaterMark = responseBuffer.getLong();
+			
+			LOG.info("receiveConsumeRequest highWaterMark {}", highWaterMark);
 
 			// Message set size
 			messageSetSize = responseBuffer.getInt();
