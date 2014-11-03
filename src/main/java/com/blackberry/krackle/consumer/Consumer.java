@@ -290,12 +290,16 @@ public class Consumer
 
 			if (conf.getAutoOffsetReset().equals("smallest"))
 			{
-				LOG.warn("Offset out of range.  Resetting to the earliest offset available.");
+				LOG.warn("[{}-{}] offset {} out of range.  Resetting to the earliest offset available {}", 
+					 offset, topic, partition, getEarliestOffset());
+				
 				offset = getEarliestOffset();
 			} 
 			else if (conf.getAutoOffsetReset().equals("largest"))
 			{
-				LOG.warn("Offset out of range.  Resetting to the latest offset available.");
+				LOG.warn("[{}-{}] Offset {} out of range.  Resetting to the latest offset available {}", 
+					 offset, topic, partition, getLatestOffset());
+				
 				offset = getLatestOffset();
 			} 
 			else
@@ -601,7 +605,7 @@ public class Consumer
 			// Next is the high watermark
 			highWaterMark = responseBuffer.getLong();
 			
-			LOG.info("receiveConsumeRequest highWaterMark {}", highWaterMark);
+			LOG.debug("[{}-{}] receiveConsumeRequest offset {} highWaterMark {}", topic, partition, offset, highWaterMark);
 
 			// Message set size
 			messageSetSize = responseBuffer.getInt();
