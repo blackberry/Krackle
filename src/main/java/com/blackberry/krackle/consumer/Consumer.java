@@ -144,7 +144,7 @@ public class Consumer
 	
 	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics)
 	{
-		LOG.info("Creating consumer for {}-{} from offset {}", topic, partition, offset);
+		LOG.info("[{}-{}] creating consumer for  from offset {}", topic, partition, offset);
 
 		this.conf = conf;
 
@@ -188,7 +188,7 @@ public class Consumer
 		fetchWaitMaxMs = conf.getFetchWaitMaxMs();
 		fetchMinBytes = conf.getFetchMinBytes();
 
-		LOG.info("Connecting to broker.");
+		LOG.info("[{}-{}] connecting to broker", topic, partition);
 		connectToBroker();
 	}
 
@@ -270,7 +270,7 @@ public class Consumer
 
 		if (brokerSocket == null || brokerSocket.isClosed())
 		{
-			LOG.info("Connecting to broker.");
+			LOG.info("[{}-{}] Connecting to broker", topic, partition);
 			connectToBroker();
 		}
 		try
@@ -290,27 +290,26 @@ public class Consumer
 
 			if (conf.getAutoOffsetReset().equals("smallest"))
 			{
-				LOG.warn("[{}-{}] offset {} out of range.  Resetting to the earliest offset available {}", 
-					 offset, topic, partition, getEarliestOffset());
-				
+				LOG.warn("[{}-{}] offset {} out of range.  Resetting to the earliest offset available {}", topic, partition, offset, getEarliestOffset());
 				offset = getEarliestOffset();
-			} 
-			else if (conf.getAutoOffsetReset().equals("largest"))
-			{
-				LOG.warn("[{}-{}] Offset {} out of range.  Resetting to the latest offset available {}", 
-					 offset, topic, partition, getLatestOffset());
-				
-				offset = getLatestOffset();
 			} 
 			else
 			{
-				LOG.error("offset out of range and  not configured to auto reset");
-				throw e;
+				if (conf.getAutoOffsetReset().equals("largest"))
+				{
+					LOG.warn("[{}-{}] Offset {} out of range.  Resetting to the latest offset available {}", topic, partition, offset, getLatestOffset());
+					offset = getLatestOffset();
+				} 
+				else
+				{
+					LOG.error("[{}-{}] offset out of range and  not configured to auto reset", topic, partition);
+					throw e;
+				}
 			}
 		}
 		catch (Exception e)
 		{
-			LOG.error("Error getting data from broker.", e);
+			LOG.error("[{}-{}] error getting data from broker: ", topic, partition, e);
 
 			if (brokerSocket != null)
 			{
@@ -320,7 +319,7 @@ public class Consumer
 				} 
 				catch (IOException e1)
 				{
-					LOG.error("Error closing socket.", e1);
+					LOG.error("[{}-{}] error closing socket: ", topic, partition, e1);
 				}
 			}
 			
@@ -340,7 +339,7 @@ public class Consumer
 		}
 		catch (IOException e)
 		{
-			LOG.error("Error getting earliest offset.");
+			LOG.error("[{}-{}] error getting earliest offset: ", topic, partition);
 		}
 		return 0L;
 	}
@@ -355,14 +354,14 @@ public class Consumer
 		}
 		catch (IOException e)
 		{
-			LOG.error("Error getting latest offset.");
+			LOG.error("[{}-{}] error getting latest offset: ", topic, partition);
 		}		
 		return Long.MAX_VALUE;
 	}
 
 	private void sendOffsetRequest(long time, int correlationId) throws IOException
 	{
-		LOG.debug("Sending request for offset. correlation id = {}, time = {}",correlationId, time);
+		LOG.debug("Sending request for offset. correlation id = {}, time = {}", correlationId, time);
 
 		offsetRequestBuffer.clear();
 
@@ -412,7 +411,7 @@ public class Consumer
 
 	private long getOffsetResponse(int correlationId) throws IOException
 	{
-		LOG.debug("Waiting for response. correlation id = {}", correlationId);
+		LOG.debug("[{}-{}] waiting for response. correlation id = {}", topic, partition, correlationId);
 
 		try
 		{
@@ -430,7 +429,7 @@ public class Consumer
 			while (bytesRead < responseLength)
 			{
 				bytesRead += brokerIn.read(offsetResponseBytes, bytesRead, responseLength - bytesRead);
-				LOG.debug("Read {} bytes", bytesRead);
+				LOG.debug("[{}-{}] read {} bytes", topic, partition, bytesRead);
 			}
 			
 			offsetResponseBuffer.clear();
@@ -440,7 +439,7 @@ public class Consumer
 			
 			if (responseCorrelationId != correlationId)
 			{
-				LOG.error("correlation id mismatch.  Expected {}, got {}", correlationId, responseCorrelationId);
+				LOG.error("[{}-{}] correlation id mismatch.  Expected {}, got {}", topic, partition, correlationId, responseCorrelationId);
 				throw new IOException("Correlation ID mismatch.  Expected " + correlationId + ". Got " + responseCorrelationId + ".");
 			}
 
@@ -489,7 +488,7 @@ public class Consumer
 
 	private void sendConsumeRequest(int correlationId) throws IOException
 	{
-		LOG.debug("Sending consume request. correlation id = {}", correlationId);
+		LOG.debug("[{}-{}] sending consume request. correlation id = {}", topic, partition, correlationId);
 
 		requestBuffer.clear();
 
@@ -547,7 +546,7 @@ public class Consumer
 
 	private void receiveConsumeResponse(int correlationId) throws IOException
 	{
-		LOG.debug("Waiting for response. correlation id = {}", correlationId);
+		LOG.debug("[{}-{}] waiting for response. correlation id = {}", topic, partition, correlationId);
 
 		try
 		{
@@ -575,7 +574,7 @@ public class Consumer
 			
 			if (responseCorrelationId != correlationId)
 			{
-				LOG.error("correlation id mismatch.  Expected {}, got {}", correlationId, responseCorrelationId);
+				LOG.error("[{}-{}] correlation id mismatch.  Expected {}, got {}", topic, partition, correlationId, responseCorrelationId);
 				throw new IOException("Correlation ID mismatch.  Expected " + correlationId + ". Got " + responseCorrelationId + ".");
 			}
 
@@ -612,7 +611,7 @@ public class Consumer
 
 			messageSetReader.init(responseBytes, responseBuffer.position(), messageSetSize);
 
-			LOG.debug("Succeeded in request.  correlation id = {}", correlationId);
+			LOG.debug("[{}-{}] succeeded in request.  correlation id = {}", topic, partition, correlationId);
 
 		} 
 		finally
@@ -639,7 +638,7 @@ public class Consumer
 				MetaData meta = MetaData.getMetaData(conf.getMetadataBrokerList(), topic, clientId);
 				Broker leader = meta.getBroker(meta.getTopic(topic).getPartition(partition).getLeader());
 
-				LOG.info("Connecting to broker {} @ {}:{}", leader.getNodeId(), leader.getHost(), leader.getPort());
+				LOG.info("[{}-{}] connecting to broker {} @ {}:{}", topic, partition, leader.getNodeId(), leader.getHost(), leader.getPort());
 				
 				brokerSocket = new Socket(leader.getHost(), leader.getPort());
 				brokerSocket.setReceiveBufferSize(conf.getSocketReceiveBufferBytes());
@@ -650,7 +649,7 @@ public class Consumer
 			} 
 			catch (Exception e)
 			{
-				LOG.error("Error connecting to broker.", e);
+				LOG.error("[{}-{}] error connecting to broker.", topic, partition, e);
 				try
 				{
 					Thread.sleep(100);
@@ -677,7 +676,7 @@ public class Consumer
 	
 	public void setNextOffset(long nextOffset) throws IOException
 	{
-		LOG.info("request to set the next offset to {} received", nextOffset);
+		LOG.info("[{}-{}] request to set the next offset to {} received", topic, partition, nextOffset);
 		
 		this.offset = nextOffset;
 		
@@ -686,7 +685,7 @@ public class Consumer
 		sendConsumeRequest(correlationId);
 		receiveConsumeResponse(correlationId);
 		
-		LOG.info("successfully set the next offset to {} via correlation ID {}", nextOffset, correlationId);
+		LOG.info("[{}-{}] successfully set the next offset to {} via correlation ID {}", topic, partition, nextOffset, correlationId);
 	}
 
 }
