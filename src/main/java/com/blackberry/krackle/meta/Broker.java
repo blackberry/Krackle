@@ -57,6 +57,11 @@ public class Broker {
     this.port = port;
   }
 
+  public String getNiceDescription()
+  {
+	  return "node " + nodeId + " @ " + host + ":" + port;
+  }
+  
   @Override
   public String toString() {
     return "Broker [nodeId=" + nodeId + ", host=" + host + ", port=" + port

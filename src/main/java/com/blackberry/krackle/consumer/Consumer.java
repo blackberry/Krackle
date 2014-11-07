@@ -26,6 +26,7 @@ import com.blackberry.krackle.meta.Broker;
 import com.blackberry.krackle.meta.MetaData;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import java.net.SocketTimeoutException;
 
 /**
  * An implementation of the Kafka 0.8 consumer.
@@ -48,7 +49,7 @@ public class Consumer
 	private String topic;
 	private byte[] topicBytes;
 	private short topicLength;
-
+	private Broker broker;
 	private int partition;
 
 	private MessageSetReader messageSetReader = new MessageSetReader();
@@ -229,38 +230,47 @@ public class Consumer
 		mMessageRequests.mark();
 		mMessageRequestsTotal.mark();
 
-		if (messageSetReader == null || messageSetReader.isReady() == false)
+		try
 		{
-			readFromBroker();
-
 			if (messageSetReader == null || messageSetReader.isReady() == false)
+			{
+				readFromBroker();
+
+				if (messageSetReader == null || messageSetReader.isReady() == false)
+				{
+					mMessageRequestsNoData.mark();
+					mMessageRequestsNoDataTotal.mark();
+					return -1;
+				}
+			}
+
+			bytesReturned = messageSetReader.getMessage(buffer, pos, maxLength);
+
+			if (bytesReturned == -1)
 			{
 				mMessageRequestsNoData.mark();
 				mMessageRequestsNoDataTotal.mark();
 				return -1;
 			}
+
+			lastOffset = messageSetReader.getOffset();
+			offset = messageSetReader.getNextOffset();
+
+			//LOG.info("message received from messageSetReader latOffset {} offset {}" , lastOffset, offset);
+
+			mMessagesReturned.mark();
+			mMessagesReturnedTotal.mark();
+			mBytesReturned.mark(bytesReturned);
+			mBytesReturnedTotal.mark(bytesReturned);
+
+			return bytesReturned;
 		}
-
-		bytesReturned = messageSetReader.getMessage(buffer, pos, maxLength);
-
-		if (bytesReturned == -1)
+		catch (SocketTimeoutException e)
 		{
-			mMessageRequestsNoData.mark();
-			mMessageRequestsNoDataTotal.mark();
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
 			return -1;
-		}
-
-		lastOffset = messageSetReader.getOffset();
-		offset = messageSetReader.getNextOffset();
-		
-		//LOG.info("message received from messageSetReader latOffset {} offset {}" , lastOffset, offset);
-
-		mMessagesReturned.mark();
-		mMessagesReturnedTotal.mark();
-		mBytesReturned.mark(bytesReturned);
-		mBytesReturnedTotal.mark(bytesReturned);
-
-		return bytesReturned;
+		}		
 	}
 	
 	private void readFromBroker() throws IOException
@@ -273,6 +283,7 @@ public class Consumer
 			LOG.info("[{}-{}] Connecting to broker", topic, partition);
 			connectToBroker();
 		}
+		
 		try
 		{
 			correlationId++;
@@ -282,7 +293,12 @@ public class Consumer
 
 			mBrokerReadSuccess.mark();
 			mBrokerReadSuccessTotal.mark();
-		} 
+		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}", topic, partition, broker.getNiceDescription());
+			connectToBroker();
+		}
 		catch (OffsetOutOfRangeException e)
 		{
 			mBrokerReadFailure.mark();
@@ -337,6 +353,11 @@ public class Consumer
 			sendOffsetRequest(Constants.EARLIEST_OFFSET, correlationId);
 			return getOffsetResponse(correlationId);
 		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
+		}
 		catch (IOException e)
 		{
 			LOG.error("[{}-{}] error getting earliest offset: ", topic, partition);
@@ -351,6 +372,11 @@ public class Consumer
 			correlationId++;
 			sendOffsetRequest(Constants.LATEST_OFFSET, correlationId);
 			return getOffsetResponse(correlationId);
+		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
 		}
 		catch (IOException e)
 		{
@@ -472,6 +498,12 @@ public class Consumer
 			return offsetResponseBuffer.getLong();
 
 		} 
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
+			return -1;
+		}
 		finally
 		{
 			// Clean out any other data that is sitting on the socket to be  read. 
@@ -636,14 +668,18 @@ public class Consumer
 			try
 			{
 				MetaData meta = MetaData.getMetaData(conf.getMetadataBrokerList(), topic, clientId);
-				Broker leader = meta.getBroker(meta.getTopic(topic).getPartition(partition).getLeader());
-
-				LOG.info("[{}-{}] connecting to broker {} @ {}:{}", topic, partition, leader.getNodeId(), leader.getHost(), leader.getPort());
+				broker = meta.getBroker(meta.getTopic(topic).getPartition(partition).getLeader());
 				
-				brokerSocket = new Socket(leader.getHost(), leader.getPort());
+				LOG.info("[{}-{}] connecting to broker {}", topic, partition, broker.getNiceDescription());
+				
+				brokerSocket = new Socket( broker.getHost(), broker.getPort());
+				brokerSocket.setSoTimeout(conf.getSocketTimeoutMs());
 				brokerSocket.setReceiveBufferSize(conf.getSocketReceiveBufferBytes());
 				brokerIn = brokerSocket.getInputStream();
 				brokerOut = brokerSocket.getOutputStream();
+				
+				LOG.info("[{}-{}] successfully connected to broker {} and set a timeout of {}", 
+					 topic, partition, broker.getNiceDescription(), conf.getSocketTimeoutMs());
 
 				break;
 			} 
@@ -682,8 +718,16 @@ public class Consumer
 		
 		correlationId++;
 
-		sendConsumeRequest(correlationId);
-		receiveConsumeResponse(correlationId);
+		try
+		{
+			sendConsumeRequest(correlationId);
+			receiveConsumeResponse(correlationId);
+		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}", topic, partition, broker.getNiceDescription());
+			connectToBroker();
+		}
 		
 		LOG.info("[{}-{}] successfully set the next offset to {} via correlation ID {}", topic, partition, nextOffset, correlationId);
 	}
