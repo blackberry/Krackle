@@ -1,12 +1,19 @@
 /**
  * Copyright 2014 BlackBerry, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package com.blackberry.krackle.consumer;
 
 import java.io.IOException;
@@ -110,7 +117,7 @@ public class Consumer
 	 * @param partition id of the partition to read from.
 	 */
 	
-	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition)
+	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition) throws BrokerUnavailableException
 	{
 		this(conf, clientId, topic, partition, 0L);
 	}
@@ -125,7 +132,7 @@ public class Consumer
 	 * @param offset the offset to start reading from.
 	 */
 	
-	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset)
+	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset) throws BrokerUnavailableException
 	{
 		this(conf, clientId, topic, partition, offset, null);
 	}
@@ -143,7 +150,7 @@ public class Consumer
 	 * @param metrics the instance of MetricRegistry to use for reporting metrics.
 	 */
 	
-	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics)
+	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics) throws BrokerUnavailableException
 	{
 		LOG.info("[{}-{}] creating consumer for  from offset {}", topic, partition, offset);
 
@@ -225,7 +232,7 @@ public class Consumer
 	 * @throws IOException
 	 */
 	
-	public int getMessage(byte[] buffer, int pos, int maxLength) throws IOException
+	public int getMessage(byte[] buffer, int pos, int maxLength) throws IOException, BrokerUnavailableException
 	{
 		mMessageRequests.mark();
 		mMessageRequestsTotal.mark();
@@ -273,7 +280,7 @@ public class Consumer
 		}		
 	}
 	
-	private void readFromBroker() throws IOException
+	private void readFromBroker() throws IOException, BrokerUnavailableException
 	{
 		mBrokerReadAttempts.mark();
 		mBrokerReadAttemptsTotal.mark();
@@ -345,7 +352,7 @@ public class Consumer
 		}
 	}
 
-	public long getEarliestOffset()
+	public long getEarliestOffset() throws BrokerUnavailableException
 	{
 		try
 		{
@@ -365,7 +372,7 @@ public class Consumer
 		return 0L;
 	}
 
-	public long getLatestOffset()
+	public long getLatestOffset() throws BrokerUnavailableException
 	{
 		try
 		{
@@ -435,7 +442,7 @@ public class Consumer
 		brokerOut.write(offsetRequestBytes, 0, offsetRequestBuffer.position());
 	}
 
-	private long getOffsetResponse(int correlationId) throws IOException
+	private long getOffsetResponse(int correlationId) throws IOException, BrokerUnavailableException
 	{
 		LOG.debug("[{}-{}] waiting for response. correlation id = {}", topic, partition, correlationId);
 
@@ -661,9 +668,14 @@ public class Consumer
 		}
 	}
 
-	private void connectToBroker()
+	private void connectToBroker() throws BrokerUnavailableException
 	{
-		while (true)
+		long backoff = 1000;
+		long retries = 5;
+		long attempt = 1;
+		Boolean stopping = false;
+
+		while(!stopping)
 		{
 			try
 			{
@@ -685,12 +697,26 @@ public class Consumer
 			} 
 			catch (Exception e)
 			{
-				LOG.error("[{}-{}] error connecting to broker.", topic, partition, e);
-				try
+				if (attempt < retries)
 				{
-					Thread.sleep(100);
+					LOG.error("[{}-{}] error connecting to broker on attempt {}/{}, retrying in {} seconds... error message was: ", 
+						 topic, partition, attempt, retries, (backoff / 1000), e);
+					try 
+					{
+						Thread.sleep(backoff);
+					}
+					catch (InterruptedException ie) 
+					{
+						stopping = true;
+					}
+					
+					backoff *= 2;
+					attempt++;
 				} 
-				catch (InterruptedException e1) { }
+				else
+				{
+					throw new BrokerUnavailableException("Failed to connect to broker, no retries left--giving up", e);
+				}
 			}
 		}
 	}
@@ -710,7 +736,7 @@ public class Consumer
 		return highWaterMark;
 	}
 	
-	public void setNextOffset(long nextOffset) throws IOException
+	public void setNextOffset(long nextOffset) throws IOException, BrokerUnavailableException
 	{
 		LOG.info("[{}-{}] request to set the next offset to {} received", topic, partition, nextOffset);
 		
