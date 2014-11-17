@@ -1,0 +1,9 @@
+Changes in Krackle 0.7.7:
+
+- Adds a new BrokerUnavailableException exception
+- Adds a new configuration parameter: socket.timeout.seconds (defaults to 30s)
+- Adds a new attribute to Consumer: private Broker broker to identify the current broker
+- Adds a new method to Broker: getNiceDescription()
+- All attempts to create open socket connection to a broker now set a timeout
+- All SocketTimeoutException now log the error and call connectToBroker()
+- connectToBroker() now attempts a max number of connections before throwing a BrokerUnavailableException
