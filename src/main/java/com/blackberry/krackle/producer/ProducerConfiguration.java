@@ -146,7 +146,8 @@ public class ProducerConfiguration
 	// Options matching the producer client
 	private List<String> metadataBrokerList;
 	private short requestRequiredAcks;
-	private int requestTimeoutMs;
+	private int requestTimeoutMs;	
+	
 	private String compressionCodec;
 	private int messageSendMaxRetries;
 	private int retryBackoffMs;
@@ -186,13 +187,13 @@ public class ProducerConfiguration
 		
 		LOG.info("Building configuration.");
 		
-		metadataBrokerList = parseMetadataBrokerList("metadata.broker.list");		
+		metadataBrokerList = parseMetadataBrokerList("metadata.broker.list");
 		queueBufferingMaxMs = parseQueueBufferingMaxMs("queue.buffering.max.ms", "5000");
 		requestRequiredAcks = parseRequestRequiredAcks("request.required.acks", "1");
 		requestTimeoutMs = parseRequestTimeoutMs("request.timeout.ms", "10000");
 		messageSendMaxRetries = parseMessageSendMaxRetries("message.send.max.retries", "3");
 		retryBackoffMs = parseRetryBackoffMs("retry.backoff.ms", "100");
-		topicMetadataRefreshIntervalMs = parseTopicMetadataRefreshIntervalMs("topic.metadata.refresh.interval.ms", "" + (600 * 1000));
+		topicMetadataRefreshIntervalMs = parseTopicMetadataRefreshIntervalMs("topic.metadata.refresh.interval.ms", "" + (60 * 10 * 1000));
 		sendBufferSize = parseSendBufferSize("send.buffer.size", "" + (int) (1.5 * 1024 * 1024));	
 		compressionCodec = parseCompressionCodec("compression.codec", "none");
 		compressionLevel = parsecCmpressionLevel("gzip.compression.level", "" + Deflater.DEFAULT_COMPRESSION);
@@ -200,10 +201,9 @@ public class ProducerConfiguration
 		
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
-	}
+	}	
 	
-	
-	private String getTopicAwarePropName (String propName)
+	public String getTopicAwarePropName (String propName)
 	{
 		if (topicName == null)
 		{
@@ -342,7 +342,7 @@ public class ProducerConfiguration
 		 * The Buffers Story:
 		 *
 		 * We may be using shared buffers HOWEVER a topic can specify it's own num.buffers 
-		 * and message.buffer.size and it's buffers become inherently private.  If that's the case 
+		 * and message.buffer.size and it's buffers become ently private.  If that's the case 
 		 * then we need to force useSharedBuffers=false and the remaining topic aware 
 		 * property naming does the rest.  In theory, it's brilliant.  In reality we'll see...
 		 * 
@@ -361,16 +361,17 @@ public class ProducerConfiguration
 		  * without overwriting the other.
 		  */
 		
-		if (propNameBufferSize.equals(defaultPropNameNumBuffers) ^ propNameNumBuffers.equals(defaultPropNameNumBuffers))
+		if (propNameBufferSize.equals(defaultPropNameBufferSize) ^ propNameNumBuffers.equals(defaultPropNameNumBuffers))
 		{
-			throw new Exception(String.format("{} and {} specified, cannot mix topic specific and global properties", 
+			throw new Exception(String.format("%s and %s specified, cannot mix topic specific and global properties", 
 				 propNameBufferSize, propNameNumBuffers));
 		}
 		
-		if (false == (propNameBufferSize.equals(defaultPropNameNumBuffers) && propNameNumBuffers.equals(defaultPropNameNumBuffers)));
+		if (false == (propNameNumBuffers.equals(defaultPropNameNumBuffers) && propNameBufferSize.equals(defaultPropNameBufferSize)))
 		{
 			useSharedBuffers = false;
-			LOG.warn("{} forcing inherently private buffers as topic specific configuration exists for {}", topicName);
+			LOG.warn("{} = {}, and {} = {}",  propNameBufferSize, defaultPropNameBufferSize, propNameNumBuffers, defaultPropNameNumBuffers);			
+			LOG.warn("{} forcing inherently private buffers as topic specific configuration exists", topicName);
 		}
 		
 		messageBufferSize = Integer.parseInt(props.getProperty(propNameBufferSize, defaultBufferSize));

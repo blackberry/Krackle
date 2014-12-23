@@ -164,89 +164,6 @@ public class Producer {
   private String freeBufferGaugeName;
 
   /**
-   * Create a new producer.
-   * 
-   * @param conf
-   *          ProducerConfiguration to use
-   * @param clientId
-   *          client id to send to the brokers
-   * @param topic
-   *          topic to produce on
-   * @param key
-   *          key to use for partitioning
-   * @throws Exception
-   */
-  public Producer(ProducerConfiguration conf, String clientId, String topic,
-      String key) throws Exception {
-    this(conf, clientId, topic, key, false, false, 0, null);
-  }
-
-  /**
-   * Create a new producer.
-   * 
-   * @param conf
-   *          ProducerConfiguration to use
-   * @param clientId
-   *          client id to send to the brokers
-   * @param topic
-   *          topic to produce on
-   * @param key
-   *          key to use for partitioning
-   * @param rotatePartitions
-   *          Whether we rotate partitions or not
-   * @throws Exception
-   */
-  public Producer(ProducerConfiguration conf, String clientId, String topic,
-      String key, boolean rotatePartitions) throws Exception {
-    this(conf, clientId, topic, key, rotatePartitions, false, 0, null);
-  }
-  
-  /**
-  * Create a new producer.
-  * 
-  * @param conf
-  *          ProducerConfiguration to use
-  * @param clientId
-  *          client id to send to the brokers
-  * @param topic
-  *          topic to produce on
-  * @param key
-  *          key to use for partitioning
-  * @param metrics
-  *          MetricRegistry instance to use for metrics.
-  * @throws Exception
-  */
- public Producer(ProducerConfiguration conf, String clientId, String topic,
-     String key, MetricRegistry metrics) throws Exception {
-   this(conf, clientId, topic, key, false, false, 0, metrics);
- }
- 
- /**
-  * Create a new producer using a given instance of MetricRegistry instead of
-  * the default singleton.
-  * 
-  * @param conf
-  *          ProducerConfiguration to use
-  * @param clientId
-  *          client id to send to the brokers
-  * @param topic
-  *          topic to produce on
-  * @param key
-  *          key to use for partitioning
-  * @param rotatePartitions
-  *          Whether we rotate partitions or not
-  * @param quickRotate
-  * 		 Whether we quickly rotate partitions or not
-  * @param quickRotateMessageBlocks
-  * 		 The number of message blocks before rotating
-  * @throws Exception
-  */
- public Producer(ProducerConfiguration conf, String clientId, String topic,
-     String key, boolean rotatePartitions, boolean quickRotate, long quickRotateMessageBlocks) throws Exception {
-	 this(conf, clientId, topic, key, rotatePartitions, quickRotate, quickRotateMessageBlocks, null);
- }
- 
-  /**
    * Create a new producer using a given instance of MetricRegistry instead of
    * the default singleton.
    * 
@@ -258,15 +175,11 @@ public class Producer {
    *          topic to produce on
    * @param key
    *          key to use for partitioning
-   * @param rotatePartitions
-   *          Whether we rotate partitions or not
    * @param metrics
    *          MetricRegistry instance to use for metrics.
    * @throws Exception
    */
-  public Producer(ProducerConfiguration conf, String clientId, String topic,
-      String key, boolean rotatePartitions, boolean quickRotate, long quickRotateMessageBlocks, 
-      MetricRegistry metrics) throws Exception {
+  public Producer(ProducerConfiguration conf, String clientId, String topic, String key, MetricRegistry metrics) throws Exception {
     LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
     this.conf = conf;
@@ -283,9 +196,6 @@ public class Producer {
     this.keyBytes = key.getBytes(UTF8);
     this.keyLength = keyBytes.length;
     
-    this.rotatePartitions = rotatePartitions;
-    this.quickRotate = quickRotate;
-    this.quickRotateMessageBlocks = quickRotateMessageBlocks;
     this.partitionModifier = 0;
     this.lastCorrelationId = correlationId;
 
@@ -456,57 +366,73 @@ public class Producer {
 
   }
 
-  private void updateMetaDataAndConnection(boolean force) {
-    LOG.info("Updating metadata");
-    metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString,
-        clientIdString);
-    LOG.debug("Metadata: {}", metadata);
+	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
+	{
+		LOG.info("Updating metadata");		
+		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);		
+		LOG.debug("Metadata: {}", metadata);
+		Topic topic = metadata.getTopic(topicString);
 
-    Topic topic = metadata.getTopic(topicString);
+		if (topic.getNumPartitions() == 0)
+		{
+			throw new MissingPartitionsException(String.format("Topic %s has zero partitions", topicString), null);
+		}
+		
+		// If we have rotateParitions set, add one to the modifier
+		if (rotatePartitions && !force)
+		{
+			partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+			lastCorrelationId = correlationId;
+		}
 
-    // If we have rotateParitions set, add one to the modifier
-    if(rotatePartitions && !force) {
-    	partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
-    	lastCorrelationId = correlationId;
-    }
-    
-    partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
-    LOG.info("Sending to partition {} of {}", partition,
-        topic.getNumPartitions());
+		partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
+		
+		LOG.info("Sending to partition {} of {}", partition, topic.getNumPartitions());
 
-    broker = metadata.getBroker(topic.getPartition(partition).getLeader());
+		broker = metadata.getBroker(topic.getPartition(partition).getLeader());
 
-    // Only reset our connection if the broker has changed, or it's forced
-    String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
-    if (force || brokerAddress == null
-        || brokerAddress.equals(newBrokerAddress) == false) {
-      brokerAddress = newBrokerAddress;
-      LOG.info("Changing brokers to {}", broker);
+		// Only reset our connection if the broker has changed, or it's forced
+		
+		String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
+		
+		if (force || brokerAddress == null || brokerAddress.equals(newBrokerAddress) == false)
+		{
+			brokerAddress = newBrokerAddress;
+			LOG.info("Changing brokers to {}", broker);
 
-      if (socket != null) {
-        try {
-          socket.close();
-        } catch (IOException e) {
-          LOG.error("Error closing connection to broker.", e);
-        }
-      }
+			if (socket != null)
+			{
+				try
+				{
+					socket.close();
+				} 
+				catch (IOException e)
+				{
+					LOG.error("Error closing connection to broker.", e);
+				}
+			}
 
-      try {
-        socket = new Socket(broker.getHost(), broker.getPort());
-        socket.setSendBufferSize(conf.getSendBufferSize());
-        socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
-        LOG.info("Connected to {}", socket);
-        in = socket.getInputStream();
-        out = socket.getOutputStream();
-      } catch (UnknownHostException e) {
-        LOG.error("Error connecting to broker.", e);
-      } catch (IOException e) {
-        LOG.error("Error connecting to broker.", e);
-      }
-    }
+			try
+			{
+				socket = new Socket(broker.getHost(), broker.getPort());
+				socket.setSendBufferSize(conf.getSendBufferSize());
+				socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
+				LOG.info("Connected to {}", socket);
+				in = socket.getInputStream();
+				out = socket.getOutputStream();
+			} 
+			catch (UnknownHostException e)
+			{
+				LOG.error("Error connecting to broker.", e);
+			} 
+			catch (IOException e)
+			{
+				LOG.error("Error connecting to broker.", e);
+			}
+		}
 
-    lastMetadataRefresh = System.currentTimeMillis();
-  }
+		lastMetadataRefresh = System.currentTimeMillis();
+	}
 
   private int crcPos;
 
@@ -799,11 +725,8 @@ public class Producer {
       mSentTotal.mark(messageSetBuffer.getBatchSize());
 
       // Periodic metadata refreshes.
-      if ((topicMetadataRefreshIntervalMs >= 0
-          && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs) 
-          || (quickRotate 
-        		  && (correlationId - lastCorrelationId > quickRotateMessageBlocks)
-        		  && (System.currentTimeMillis() - lastMetadataRefresh > 30000))) {
+      if ((topicMetadataRefreshIntervalMs >= 0 
+			 && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs)) {
         try {
           updateMetaDataAndConnection(false);
         } catch (Throwable t) {
