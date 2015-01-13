@@ -141,7 +141,7 @@ public class ProducerConfiguration
 
 	protected static final int ONE_MB = 1024 * 1024;
 	private Properties props;
-	private String topicName;
+	public String topicName;
 
 	// Options matching the producer client
 	private List<String> metadataBrokerList;
@@ -205,12 +205,12 @@ public class ProducerConfiguration
 	
 	public String getTopicAwarePropName (String propName)
 	{
-		if (topicName == null)
+		if (getTopicName() == null)
 		{
 			return propName;
 		}
 		
-		String topicPropName = String.format("source.%s.%s", topicName, propName);
+		String topicPropName = String.format("source.%s.%s", getTopicName(), propName);
 		
 		if (props.containsKey(topicPropName))
 		{
@@ -371,7 +371,7 @@ public class ProducerConfiguration
 		{
 			useSharedBuffers = false;
 			LOG.warn("{} = {}, and {} = {}",  propNameBufferSize, defaultPropNameBufferSize, propNameNumBuffers, defaultPropNameNumBuffers);			
-			LOG.warn("{} forcing inherently private buffers as topic specific configuration exists", topicName);
+			LOG.warn("{} forcing inherently private buffers as topic specific configuration exists", getTopicName());
 		}
 		
 		messageBufferSize = Integer.parseInt(props.getProperty(propNameBufferSize, defaultBufferSize));
@@ -590,6 +590,22 @@ public class ProducerConfiguration
 	public void setQueueEnqueueTimeoutMs(long queueEnqueueTimeoutMs)
 	{
 		this.queueEnqueueTimeoutMs = queueEnqueueTimeoutMs;
+	}
+
+	/**
+	 * @return the topicName
+	 */
+	public String getTopicName()
+	{
+		return topicName;
+	}
+
+	/**
+	 * @param topicName the topicName to set
+	 */
+	public void setTopicName(String topicName)
+	{
+		this.topicName = topicName;
 	}
 
 }
