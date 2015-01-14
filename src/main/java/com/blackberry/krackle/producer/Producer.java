@@ -799,7 +799,7 @@ public class Producer {
     public void run() {
     	long sendStart = 0;
     
-    	String metricName = "krackle:producer:" + conf.topicName + ":thread_" + senderThreads.indexOf(Thread.currentThread().getId()) + ":blockSendTime(ms)";
+    	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread().getId()) + ":blockSendTime(ms)";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
           new Gauge<Integer>() {
             @Override
