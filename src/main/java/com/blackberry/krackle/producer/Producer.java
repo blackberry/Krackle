@@ -144,7 +144,8 @@ public class Producer {
   private OutputStream out;
   private InputStream in;
 
-  private ArrayList<Thread> senderThreads;
+  private ArrayList<Thread> senderThreads = new ArrayList<Thread>();
+  private ArrayList<Sender> senders = new ArrayList<Sender>();
 
   private boolean closed = false;
 
@@ -160,7 +161,7 @@ public class Producer {
   private Meter mDroppedQueueFullTotal = null;
   private Meter mDroppedSendFail = null;
   private Meter mDroppedSendFailTotal = null;
-
+  
   private String freeBufferGaugeName;
 
   /**
@@ -242,6 +243,9 @@ public class Producer {
     	senderThread.setName("Sender-Thread");
     	senderThread.start();
     	senderThreads.add(senderThread);
+    	senders.add(sender);
+    	
+    	
     	
     }
 
@@ -261,6 +265,8 @@ public class Producer {
       			senderThread.setName("Sender-Thread");
       			senderThread.start();
       			toAdd.add(senderThread);
+      			senders.add(sender);
+      			
       		}
       	}
       	
@@ -591,7 +597,7 @@ public class Producer {
         // If we 're not compressing, then we can just dump the rest of the
         // message here.
 
-        // Mesage set size
+        // Message set size
         toSendBuffer.putInt(messageSetBuffer.getBuffer().position());
 
         // Message set
@@ -661,6 +667,7 @@ public class Producer {
 
       // Fill in the complete message size
       toSendBuffer.putInt(0, toSendBuffer.position() - 4);
+
 
       // Send it!
       retry = 0;
@@ -789,10 +796,23 @@ public class Producer {
 
   private class Sender implements Runnable {
     private MessageSetBuffer buffer;
+    private int lastLatency = 0;
+    
 
     @Override
     public void run() {
-      while (true) {
+    	long sendStart = 0;
+    
+    	String metricName = "krackle:producer:" + conf.topicName + ":thread_" + senders.indexOf(this) + ":blockSendTime(ms)";
+    	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
+          new Gauge<Integer>() {
+            @Override
+            public Integer getValue() {
+              return lastLatency;
+            }
+          });
+    	    	
+    	while (true) {
         try {
           if (closed && buffersToSend.isEmpty()) {
             break;
@@ -808,7 +828,9 @@ public class Producer {
             continue;
           }
           
+          sendStart = System.nanoTime();
           sendMessage(buffer);
+          lastLatency = (int)(System.nanoTime() - sendStart * 1000000);
           
           buffer.clear();
           freeBuffers.add(buffer);
