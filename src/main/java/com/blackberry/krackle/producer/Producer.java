@@ -774,7 +774,9 @@ public class Producer {
     activeMessageSetBuffer = null;
 
     try {
-      senderThread.join();
+    	for(Thread senderThread : senderThreads) {
+    		senderThread.join();
+    	}
     } catch (InterruptedException e) {
       LOG.error("Error shutting down sender and loader threads.", e);
     }
