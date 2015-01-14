@@ -144,8 +144,7 @@ public class Producer {
   private OutputStream out;
   private InputStream in;
 
-
-  private ArrayList<Sender> senders = new ArrayList<>();
+  private Sender sender = null;
   private ArrayList<Thread> senderThreads = new ArrayList<>();
 
   private boolean closed = false;
@@ -237,37 +236,33 @@ public class Producer {
     }
 
  // Create the sender threads
+    sender = new Sender();
+    
     for (int i = 0; i < conf.getSenderThreads(); i++) {
-    	Sender sender = new Sender();
     	Thread senderThread = new Thread(sender);
     	senderThread.setDaemon(false);
-    	senderThread.setName("Sender-Thread");
+    	senderThread.setName("Sender-Thread-" + i);
     	senderThread.start();
     	senderThreads.add(senderThread);
-    	senders.add(sender);
-    	
-    	
-    	
     }
 
     // Ensure that if the sender thread ever dies, it is restarted.
     scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
       @Override
       public void run() {
+
       	ArrayList<Thread> toRemove = new ArrayList<Thread>();
       	ArrayList<Thread> toAdd = new ArrayList<Thread>();
+
       	for(Thread senderThread : senderThreads) {
       		if (senderThread == null || senderThread.isAlive() == false) {
       			toRemove.add(senderThread);
       			LOG.error("[{}] Sender thread is dead! Restarting it.", topicString);
-      			Sender sender = new Sender();
       			senderThread = new Thread(sender);
       			senderThread.setDaemon(false);
       			senderThread.setName("Sender-Thread");
       			senderThread.start();
       			toAdd.add(senderThread);
-      			senders.add(sender);
-      			
       		}
       	}
       	
@@ -804,7 +799,7 @@ public class Producer {
     public void run() {
     	long sendStart = 0;
     
-    	String metricName = "krackle:producer:" + conf.topicName + ":thread_" + senders.indexOf(this) + ":blockSendTime(ms)";
+    	String metricName = "krackle:producer:" + conf.topicName + ":thread_" + senderThreads.indexOf(Thread.currentThread().getId()) + ":blockSendTime(ms)";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
           new Gauge<Integer>() {
             @Override
