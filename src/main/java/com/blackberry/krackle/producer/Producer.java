@@ -23,6 +23,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -143,8 +144,7 @@ public class Producer {
   private OutputStream out;
   private InputStream in;
 
-  private Sender sender;
-  private Thread senderThread;
+  private ArrayList<Thread> senderThreads;
 
   private boolean closed = false;
 
@@ -234,25 +234,42 @@ public class Producer {
       metadata = null;
     }
 
-    // Start the send thread
-    sender = new Sender();
-    senderThread = new Thread(sender);
-    senderThread.setDaemon(false);
-    senderThread.setName("Sender-Thread");
-    senderThread.start();
+ // Create the sender threads
+    for (int i = 0; i < conf.getSenderThreads(); i++) {
+    	Sender sender = new Sender();
+    	Thread senderThread = new Thread(sender);
+    	senderThread.setDaemon(false);
+    	senderThread.setName("Sender-Thread");
+    	senderThread.start();
+    	senderThreads.add(senderThread);
+    	
+    }
 
     // Ensure that if the sender thread ever dies, it is restarted.
     scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
       @Override
       public void run() {
-        if (senderThread == null || senderThread.isAlive() == false) {
-          LOG.error("[{}] Sender thread is dead! Restarting it.", topicString);
-          sender = new Sender();
-          senderThread = new Thread(sender);
-          senderThread.setDaemon(false);
-          senderThread.setName("Sender-Thread");
-          senderThread.start();
-        }
+      	ArrayList<Thread> toRemove = new ArrayList<Thread>();
+      	ArrayList<Thread> toAdd = new ArrayList<Thread>();
+      	for(Thread senderThread : senderThreads) {
+      		if (senderThread == null || senderThread.isAlive() == false) {
+      			toRemove.add(senderThread);
+      			LOG.error("[{}] Sender thread is dead! Restarting it.", topicString);
+      			Sender sender = new Sender();
+      			senderThread = new Thread(sender);
+      			senderThread.setDaemon(false);
+      			senderThread.setName("Sender-Thread");
+      			senderThread.start();
+      			toAdd.add(senderThread);
+      		}
+      	}
+      	
+      	for(Thread removeThread: toRemove) {
+      			senderThreads.remove(removeThread);
+      	}
+      	for(Thread addThread: toAdd) {
+    			senderThreads.add(addThread);
+      	}
       }
     }, 1, 1, TimeUnit.MINUTES);
   }

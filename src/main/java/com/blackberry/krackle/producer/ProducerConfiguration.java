@@ -151,6 +151,7 @@ public class ProducerConfiguration
 	private String compressionCodec;
 	private int messageSendMaxRetries;
 	private int retryBackoffMs;
+	private int senderThreads;
 	private long topicMetadataRefreshIntervalMs;
 	private long queueBufferingMaxMs;
 	private long queueEnqueueTimeoutMs;
@@ -198,6 +199,7 @@ public class ProducerConfiguration
 		compressionCodec = parseCompressionCodec("compression.codec", "none");
 		compressionLevel = parsecCmpressionLevel("gzip.compression.level", "" + Deflater.DEFAULT_COMPRESSION);
 		queueEnqueueTimeoutMs = parseQueueEnqueueTimeoutMs("queue.enqueue.timeout.ms", "-1");
+		senderThreads = parseSenderThreads("sender.threads", "1");
 		
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
@@ -327,6 +329,14 @@ public class ProducerConfiguration
 		Long myTopicMetadataRefreshIntervalMs = Long.parseLong(props.getProperty(propNameTopicMetadataRefreshIntervalMs, defaultValue));		
 		LOG.info("{} = {}", propNameTopicMetadataRefreshIntervalMs, myTopicMetadataRefreshIntervalMs);		
 		return myTopicMetadataRefreshIntervalMs;
+	}
+	
+	private int parseSenderThreads(String propName, String defaultValue) throws Exception
+	{
+		String propNameTopicSenderThreads = getTopicAwarePropName(propName);		
+		Integer myTopicSenderThreads = Integer.parseInt(props.getProperty(propNameTopicSenderThreads, defaultValue));		
+		LOG.info("{} = {}", propNameTopicSenderThreads, myTopicSenderThreads);		
+		return myTopicSenderThreads;
 	}
 	
 	private void parseAndSetBuffers(
@@ -502,6 +512,16 @@ public class ProducerConfiguration
 		this.messageSendMaxRetries = messageSendMaxRetries;
 	}
 
+	public int getSenderThreads()
+	{
+		return senderThreads;
+	}
+	
+	public void setSenderThreads (int senderThreads)
+	{
+		this.senderThreads = senderThreads;
+	}
+	
 	public int getRetryBackoffMs()
 	{
 		return retryBackoffMs;
