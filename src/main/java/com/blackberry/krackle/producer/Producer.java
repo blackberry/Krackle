@@ -144,7 +144,7 @@ public class Producer {
   private OutputStream out;
   private InputStream in;
 
-  private ArrayList<Thread> senderThreads;
+  private ArrayList<Thread> senderThreads = new ArrayList<>();
 
   private boolean closed = false;
 
