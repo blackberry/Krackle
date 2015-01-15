@@ -542,7 +542,7 @@ public class Producer {
   	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
   		LOG.info("Updating metadata");		
-  		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientThreadIdString );		
+  		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString );		
   		LOG.debug("Metadata: {}", metadata);
   		Topic topic = metadata.getTopic(topicString);
 
@@ -622,8 +622,8 @@ public class Producer {
         // Correlation Id
         toSendBuffer.putInt(correlationId);
         // Client Id
-        toSendBuffer.putShort(clientThreadIdLength);
-        toSendBuffer.put(clientThreadIdBytes);
+        toSendBuffer.putShort(clientIdLength);
+        toSendBuffer.put(clientIdBytes);
         // Required Acks
         toSendBuffer.putShort(requiredAcks);
         // Timeout in ms
@@ -715,7 +715,7 @@ public class Producer {
               updateMetaDataAndConnection(true);
             }
 
-            LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationId: {} ClientId: {} Socket: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId, clientThreadIdString, socket.toString());	
+            LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationId: {} ClientId: {} Socket: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId, clientIdString, socket.toString());	
             // Send request
             out.write(toSendBytes, 0, toSendBuffer.position());
 
@@ -745,7 +745,7 @@ public class Producer {
               // not 0)
               responseCorrelationId = responseBuffer.getInt();
               if (responseCorrelationId != correlationId) {
-                throw new Exception("Correlation ID mismatch.  Expected " + correlationId + ", got " + responseCorrelationId + " ClientID: " + clientThreadIdString + " Socket: " + socket.toString());
+                throw new Exception("Correlation ID mismatch.  Expected " + correlationId + ", got " + responseCorrelationId + " ClientID: " + clientIdString + " Socket: " + socket.toString());
               }
               responseErrorCode = responseBuffer.getShort(18 + topicLength);
               if (responseErrorCode != KafkaError.NoError.getCode()) {
