@@ -169,9 +169,7 @@ public class Producer {
     this.topicLength = (short) topicBytes.length;
 
     this.clientIdString = clientId;
-    this.clientIdBytes = clientId.getBytes(UTF8);
-    this.clientIdLength = (short) clientId.length();
-
+  
     this.keyString = key;
     this.keyBytes = key.getBytes(UTF8);
     this.keyLength = keyBytes.length;
@@ -511,6 +509,12 @@ public class Producer {
     private OutputStream out;
     private InputStream in;
     
+    private String clientThreadIdString;
+    private byte[] clientThreadIdBytes;
+    private short clientThreadIdLength;
+    
+    
+    
     private MetaData metadata;
     private long lastMetadataRefresh;
     private int partition;
@@ -525,6 +529,9 @@ public class Producer {
       // then we can expand it to the appropriate size.
       responseBytes = new byte[4];
       responseBuffer = ByteBuffer.wrap(responseBytes);
+      this.clientThreadIdString = clientIdString + "-" + Thread.currentThread().getId();
+      this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
+      this.clientThreadIdLength = (short) clientThreadIdString.length();
       
       // Try to do this. If it fails, then we can try again when it's time to
       // send.
@@ -542,7 +549,7 @@ public class Producer {
   	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
   		LOG.info("Updating metadata");		
-  		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString + "-" + Thread.currentThread().getId() );		
+  		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientThreadIdString );		
   		LOG.debug("Metadata: {}", metadata);
   		Topic topic = metadata.getTopic(topicString);
 
@@ -622,8 +629,8 @@ public class Producer {
         // Correlation Id
         toSendBuffer.putInt(correlationId);
         // Client Id
-        toSendBuffer.putShort(clientIdLength);
-        toSendBuffer.put(clientIdBytes);
+        toSendBuffer.putShort(clientThreadIdLength);
+        toSendBuffer.put(clientThreadIdBytes);
         // Required Acks
         toSendBuffer.putShort(requiredAcks);
         // Timeout in ms
@@ -746,16 +753,12 @@ public class Producer {
               // not 0)
               responseCorrelationId = responseBuffer.getInt();
               if (responseCorrelationId != correlationId) {
-                throw new Exception("Correlation ID mismatch.  Expected "
-                    + correlationId + ", got " + responseCorrelationId);
+                throw new Exception("Correlation ID mismatch.  Expected " + correlationId + ", got " + responseCorrelationId);
               }
               responseErrorCode = responseBuffer.getShort(18 + topicLength);
               if (responseErrorCode != KafkaError.NoError.getCode()) {
-                throw new Exception("Got error from broker. Error Code "
-                    + responseErrorCode + " ("
-                    + getErrorString(responseErrorCode) + ")");
+                throw new Exception("Got error from broker. Error Code " + responseErrorCode + " (" + getErrorString(responseErrorCode) + ")");
               }
-
               // Clear the responses, if there is anything else to read
               while (in.available() > 0) {
                 in.read(responseBytes, 0, responseBytes.length);
@@ -768,8 +771,7 @@ public class Producer {
 
             retry++;
             if (retry <= retries) {
-              LOG.warn("Request failed. Retrying {} more times for {}.", retries - retry
-                  + 1, topicString, t);
+              LOG.warn("Request failed. Retrying {} more times for {}.", retries - retry + 1, topicString, t);
               try {
                 Thread.sleep(retryBackoffMs);
               } catch (InterruptedException e) {
