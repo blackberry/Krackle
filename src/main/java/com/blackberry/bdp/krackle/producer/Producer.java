@@ -653,8 +653,7 @@ public class Producer {
           toSendBuffer.putInt(messageSetBuffer.getBuffer().position());
 
           // Message set
-          toSendBuffer.put(messageSetBuffer.getBytes(), 0, messageSetBuffer
-              .getBuffer().position());
+          toSendBuffer.put(messageSetBuffer.getBytes(), 0, messageSetBuffer.getBuffer().position());
 
         } else {
           // If we are compressing, then do that.
@@ -723,7 +722,7 @@ public class Producer {
               updateMetaDataAndConnection(true);
             }
 
-            LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationId: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId);	
+            LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationId: {} ClientId: {} Socket: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId, clientThreadIdString, socket.toString());	
             // Send request
             out.write(toSendBytes, 0, toSendBuffer.position());
 
@@ -753,7 +752,7 @@ public class Producer {
               // not 0)
               responseCorrelationId = responseBuffer.getInt();
               if (responseCorrelationId != correlationId) {
-                throw new Exception("Correlation ID mismatch.  Expected " + correlationId + ", got " + responseCorrelationId);
+                throw new Exception("Correlation ID mismatch.  Expected " + correlationId + ", got " + responseCorrelationId + " ClientID: " + clientThreadIdString + " Socket: " + socket.toString());
               }
               responseErrorCode = responseBuffer.getShort(18 + topicLength);
               if (responseErrorCode != KafkaError.NoError.getCode()) {
