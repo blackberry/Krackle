@@ -78,8 +78,6 @@ public class Producer {
   private String keyString;
   private boolean rotatePartitions;
   private int partitionModifier;
-  private boolean quickRotate;
-  private long quickRotateMessageBlocks;
   private byte[] keyBytes;
   private int keyLength;
 
@@ -121,11 +119,7 @@ public class Producer {
   // with one instance.
   private CRC32 crcSend = new CRC32();
 
-  private MetaData metadata;
-  private long lastMetadataRefresh;
-  private int partition;
-  private Broker broker;
-  private String brokerAddress = null;
+
 
 
   private Sender sender = null;
@@ -517,6 +511,12 @@ public class Producer {
     private OutputStream out;
     private InputStream in;
     
+    private MetaData metadata;
+    private long lastMetadataRefresh;
+    private int partition;
+    private Broker broker;
+    private String brokerAddress = null;
+    
     
     public Sender() {
       toSendBuffer = ByteBuffer.wrap(toSendBytes);
@@ -542,7 +542,7 @@ public class Producer {
   	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
   		LOG.info("Updating metadata");		
-  		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);		
+  		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString + "-" + Thread.currentThread().getId() );		
   		LOG.debug("Metadata: {}", metadata);
   		Topic topic = metadata.getTopic(topicString);
 
