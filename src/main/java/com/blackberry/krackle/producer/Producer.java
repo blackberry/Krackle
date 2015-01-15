@@ -110,29 +110,15 @@ public class Producer {
   // For compressed messages, this shouldn't need to be bigger.
   private int sendBufferSize;
   private byte[] toSendBytes;
-  private ByteBuffer toSendBuffer;
 
-  // Buffer for reading responses from the server.
-  private byte[] responseBytes;
-  private ByteBuffer responseBuffer;
+
+
 
   // How to compress!
   Compressor compressor;
 
-  // Stuff for internal use
-  private int correlationId = 0;
-  private int lastCorrelationId;
-  private int messageSetSizePos;
-  private int messageSizePos;
-  private int messageCompressedSize;
-  private int responseSize;
-  private int responseCorrelationId;
-  private short responseErrorCode;
-  private int retry;
-
   // We could be using crc in 2 separate blocks, which could cause corruption
   // with one instance.
-  private CRC32 crcSendMessage = new CRC32();
   private CRC32 crcSend = new CRC32();
 
   private MetaData metadata;
@@ -140,12 +126,11 @@ public class Producer {
   private int partition;
   private Broker broker;
   private String brokerAddress = null;
-  private Socket socket;
-  private OutputStream out;
-  private InputStream in;
+
 
   private Sender sender = null;
   private ArrayList<Thread> senderThreads = new ArrayList<>();
+  private ArrayList<Sender> senders = new ArrayList<>();
 
   private boolean closed = false;
 
@@ -198,8 +183,7 @@ public class Producer {
     this.keyLength = keyBytes.length;
     
     this.partitionModifier = 0;
-    this.lastCorrelationId = correlationId;
-
+    
     if (metrics == null) {
       this.metrics = MetricRegistrySingleton.getInstance().getMetricsRegistry();
       MetricRegistrySingleton.getInstance().enableJmx();
@@ -224,26 +208,17 @@ public class Producer {
       }
     }, queueBufferingMaxMs, queueBufferingMaxMs, TimeUnit.MILLISECONDS);
 
-    // Try to do this. If it fails, then we can try again when it's time to
-    // send.
-    try {
-      // In case this fails, we don't want the value to be null;
-      lastMetadataRefresh = System.currentTimeMillis();
-      updateMetaDataAndConnection(true);
-    } catch (Throwable t) {
-      LOG.warn("Initial load of metadata failed.", t);
-      metadata = null;
-    }
+   
 
- // Create the sender threads
-    sender = new Sender();
-    
+ // Create the sender obects and threads
     for (int i = 0; i < conf.getSenderThreads(); i++) {
+    	sender = new Sender();
     	Thread senderThread = new Thread(sender);
     	senderThread.setDaemon(false);
     	senderThread.setName("Sender-Thread-" + i);
     	senderThread.start();
     	senderThreads.add(senderThread);
+    	senders.add(sender);
     }
 
     // Ensure that if the sender thread ever dies, it is restarted.
@@ -366,12 +341,6 @@ public class Producer {
     buffersToSend = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
 
     toSendBytes = new byte[sendBufferSize];
-    toSendBuffer = ByteBuffer.wrap(toSendBytes);
-
-    // We need this to be big enough to read the length of the first response,
-    // then we can expand it to the appropriate size.
-    responseBytes = new byte[4];
-    responseBuffer = ByteBuffer.wrap(responseBytes);
 
     if (compressionCodec.equals("none")) {
       compressor = null;
@@ -385,73 +354,7 @@ public class Producer {
 
   }
 
-	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
-	{
-		LOG.info("Updating metadata");		
-		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);		
-		LOG.debug("Metadata: {}", metadata);
-		Topic topic = metadata.getTopic(topicString);
 
-		if (topic.getNumPartitions() == 0)
-		{
-			throw new MissingPartitionsException(String.format("Topic %s has zero partitions", topicString), null);
-		}
-		
-		// If we have rotateParitions set, add one to the modifier
-		if (rotatePartitions && !force)
-		{
-			partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
-			lastCorrelationId = correlationId;
-		}
-
-		partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
-		
-		LOG.info("Sending to partition {} of {}", partition, topic.getNumPartitions());
-
-		broker = metadata.getBroker(topic.getPartition(partition).getLeader());
-
-		// Only reset our connection if the broker has changed, or it's forced
-		
-		String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
-		
-		if (force || brokerAddress == null || brokerAddress.equals(newBrokerAddress) == false)
-		{
-			brokerAddress = newBrokerAddress;
-			LOG.info("Changing brokers to {}", broker);
-
-			if (socket != null)
-			{
-				try
-				{
-					socket.close();
-				} 
-				catch (IOException e)
-				{
-					LOG.error("Error closing connection to broker.", e);
-				}
-			}
-
-			try
-			{
-				socket = new Socket(broker.getHost(), broker.getPort());
-				socket.setSendBufferSize(conf.getSendBufferSize());
-				socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
-				LOG.info("Connected to {}", socket);
-				in = socket.getInputStream();
-				out = socket.getOutputStream();
-			} 
-			catch (UnknownHostException e)
-			{
-				LOG.error("Error connecting to broker.", e);
-			} 
-			catch (IOException e)
-			{
-				LOG.error("Error connecting to broker.", e);
-			}
-		}
-
-		lastMetadataRefresh = System.currentTimeMillis();
-	}
 
   private int crcPos;
 
@@ -557,208 +460,7 @@ public class Producer {
   int nextLoadingBuffer;
   boolean incrementLoadingBufferResult;
 
-  // Send accumulated messages
-  protected void sendMessage(MessageSetBuffer messageSetBuffer) {
-    try {
-      // New message, new id
-      correlationId++;
-
-      /* headers */
-      // Skip 4 bytes for the size
-      toSendBuffer.position(4);
-      // API key for produce
-      toSendBuffer.putShort(Constants.APIKEY_PRODUCE);
-      // Version
-      toSendBuffer.putShort(Constants.API_VERSION);
-      // Correlation Id
-      toSendBuffer.putInt(correlationId);
-      // Client Id
-      toSendBuffer.putShort(clientIdLength);
-      toSendBuffer.put(clientIdBytes);
-      // Required Acks
-      toSendBuffer.putShort(requiredAcks);
-      // Timeout in ms
-      toSendBuffer.putInt(brokerTimeout);
-      // Number of topics
-      toSendBuffer.putInt(1);
-      // Topic name
-      toSendBuffer.putShort(topicLength);
-      toSendBuffer.put(topicBytes);
-      // Number of partitions
-      toSendBuffer.putInt(1);
-      // Partition
-      toSendBuffer.putInt(partition);
-
-      if (compressor == null) {
-        // If we 're not compressing, then we can just dump the rest of the
-        // message here.
-
-        // Message set size
-        toSendBuffer.putInt(messageSetBuffer.getBuffer().position());
-
-        // Message set
-        toSendBuffer.put(messageSetBuffer.getBytes(), 0, messageSetBuffer
-            .getBuffer().position());
-
-      } else {
-        // If we are compressing, then do that.
-
-        // Message set size ? We'll have to do this later.
-        messageSetSizePos = toSendBuffer.position();
-        toSendBuffer.position(toSendBuffer.position() + 4);
-
-        // offset can be anything for produce requests. We'll use 0
-        toSendBuffer.putLong(0L);
-
-        // Skip 4 bytes for size, and 4 for crc
-        messageSizePos = toSendBuffer.position();
-        toSendBuffer.position(toSendBuffer.position() + 8);
-
-        toSendBuffer.put(Constants.MAGIC_BYTE); // magic number
-        toSendBuffer.put(compressor.getAttribute()); // Compression goes
-        // here.
-
-        // Add the key
-        toSendBuffer.putInt(keyLength);
-        toSendBuffer.put(keyBytes);
-
-        // Compress the value here, into the toSendBuffer
-        try {
-          messageCompressedSize = compressor.compress(messageSetBuffer
-              .getBytes(), 0, messageSetBuffer.getBuffer().position(),
-              toSendBytes, toSendBuffer.position() + 4);
-
-          if (messageCompressedSize == -1) {
-            // toSendBytes is too small to hold the compressed data
-            throw new IOException(
-                "Not enough room in the send buffer for the compressed data.");
-          }
-        } catch (IOException e) {
-          LOG.error("Exception while compressing data.  (data lost).", e);
-          return;
-        }
-
-        // Write the size
-        toSendBuffer.putInt(messageCompressedSize);
-
-        // Update the send buffer position
-        toSendBuffer.position(toSendBuffer.position() + messageCompressedSize);
-
-        /** Go back and fill in the missing pieces **/
-        // Message Set Size
-        toSendBuffer.putInt(messageSetSizePos, toSendBuffer.position()
-            - (messageSetSizePos + 4));
-
-        // Message Size
-        toSendBuffer.putInt(messageSizePos, toSendBuffer.position()
-            - (messageSizePos + 4));
-
-        // Message CRC
-        crcSendMessage.reset();
-        crcSendMessage.update(toSendBytes, messageSizePos + 8,
-            toSendBuffer.position() - (messageSizePos + 8));
-        toSendBuffer
-            .putInt(messageSizePos + 4, (int) crcSendMessage.getValue());
-      }
-
-      // Fill in the complete message size
-      toSendBuffer.putInt(0, toSendBuffer.position() - 4);
-
-
-      // Send it!
-      retry = 0;
-      while (retry <= retries) {
-        try {
-          if (metadata == null || socket == null) {
-            updateMetaDataAndConnection(true);
-          }
-
-          // Send request
-          out.write(toSendBytes, 0, toSendBuffer.position());
-
-          if (requiredAcks != 0) {
-            // Check response
-            responseBuffer.clear();
-            in.read(responseBytes, 0, 4);
-            responseSize = responseBuffer.getInt();
-            if (responseBuffer.capacity() < responseSize) {
-              responseBytes = new byte[responseSize];
-              responseBuffer = ByteBuffer.wrap(responseBytes);
-            }
-            responseBuffer.clear();
-            in.read(responseBytes, 0, responseSize);
-
-            // Response bytes are
-            // - 4 byte correlation id
-            // - 4 bytes for number of topics. This is always 1 in this case.
-            // - 2 bytes for length of topic name.
-            // - topicLength bytes for topic
-            // - 4 bytes for number of partitions. Always 1.
-            // - 4 bytes for partition number (which we already know)
-            // - 2 bytes for error code (That's interesting to us)
-            // - 8 byte offset of the first message (we don't care).
-            // The only things we care about here are the correlation id (must
-            // match) and the error code (so we can throw an exception if it's
-            // not 0)
-            responseCorrelationId = responseBuffer.getInt();
-            if (responseCorrelationId != correlationId) {
-              throw new Exception("Correlation ID mismatch.  Expected "
-                  + correlationId + ", got " + responseCorrelationId);
-            }
-            responseErrorCode = responseBuffer.getShort(18 + topicLength);
-            if (responseErrorCode != KafkaError.NoError.getCode()) {
-              throw new Exception("Got error from broker. Error Code "
-                  + responseErrorCode + " ("
-                  + getErrorString(responseErrorCode) + ")");
-            }
-
-            // Clear the responses, if there is anything else to read
-            while (in.available() > 0) {
-              in.read(responseBytes, 0, responseBytes.length);
-            }
-          }
-
-          break;
-        } catch (Throwable t) {
-          metadata = null;
-
-          retry++;
-          if (retry <= retries) {
-            LOG.warn("Request failed. Retrying {} more times for {}.", retries - retry
-                + 1, topicString, t);
-            try {
-              Thread.sleep(retryBackoffMs);
-            } catch (InterruptedException e) {
-              // Do nothing
-            }
-          } else {
-            LOG.error("Request failed. No more retries (data lost) for {}.", topicString, t);
-            mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
-            mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
-          }
-
-        }
-      }
-
-      toSendBuffer.clear();
-      mSent.mark(messageSetBuffer.getBatchSize());
-      mSentTotal.mark(messageSetBuffer.getBatchSize());
-
-      // Periodic metadata refreshes.
-      if ((topicMetadataRefreshIntervalMs >= 0 
-			 && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs)) {
-        try {
-          updateMetaDataAndConnection(false);
-        } catch (Throwable t) {
-          LOG.error("Error refreshing metadata.", t);
-        }
-      }
-    } catch (Throwable t) {
-      LOG.error("Unexpected exception: {}", t);
-      mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
-      mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
-    }
-  }
+ 
 
   private String getErrorString(short errorCode) {
     for (KafkaError e : KafkaError.values()) {
@@ -793,11 +495,319 @@ public class Producer {
   private class Sender implements Runnable {
     private MessageSetBuffer buffer;
     private int lastLatency = 0;
+    private int correlationId = 0;
+    private ByteBuffer toSendBuffer;
+    private int messageSetSizePos;
+    private int messageSizePos;
+    private int messageCompressedSize;
+    private CRC32 crcSendMessage = new CRC32();
     
+    
+    // Buffer for reading responses from the server.
+    private byte[] responseBytes;
+    private ByteBuffer responseBuffer;
+    
+    private int responseSize;
+    private int responseCorrelationId;
+    private short responseErrorCode;
+    private int retry;
+    
+    private Socket socket;
+    private OutputStream out;
+    private InputStream in;
+    
+    
+    public Sender() {
+      toSendBuffer = ByteBuffer.wrap(toSendBytes);
 
+      // We need this to be big enough to read the length of the first response,
+      // then we can expand it to the appropriate size.
+      responseBytes = new byte[4];
+      responseBuffer = ByteBuffer.wrap(responseBytes);
+      
+      // Try to do this. If it fails, then we can try again when it's time to
+      // send.
+      try {
+        // In case this fails, we don't want the value to be null;
+        lastMetadataRefresh = System.currentTimeMillis();
+        updateMetaDataAndConnection(true);
+      } catch (Throwable t) {
+        LOG.warn("Initial load of metadata failed.", t);
+        metadata = null;
+      }
+     
+    }
+    
+  	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
+  	{
+  		LOG.info("Updating metadata");		
+  		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);		
+  		LOG.debug("Metadata: {}", metadata);
+  		Topic topic = metadata.getTopic(topicString);
+
+  		if (topic.getNumPartitions() == 0)
+  		{
+  			throw new MissingPartitionsException(String.format("Topic %s has zero partitions", topicString), null);
+  		}
+  		
+  		// If we have rotateParitions set, add one to the modifier
+  		if (rotatePartitions && !force)
+  		{
+  			partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+  		}
+
+  		partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
+  		
+  		LOG.info("Sending to partition {} of {}", partition, topic.getNumPartitions());
+
+  		broker = metadata.getBroker(topic.getPartition(partition).getLeader());
+
+  		// Only reset our connection if the broker has changed, or it's forced
+  		
+  		String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
+  		
+  		if (force || brokerAddress == null || brokerAddress.equals(newBrokerAddress) == false)
+  		{
+  			brokerAddress = newBrokerAddress;
+  			LOG.info("Changing brokers to {}", broker);
+
+  			if (socket != null)
+  			{
+  				try
+  				{
+  					socket.close();
+  				} 
+  				catch (IOException e)
+  				{
+  					LOG.error("Error closing connection to broker.", e);
+  				}
+  			}
+
+  			try
+  			{
+  				socket = new Socket(broker.getHost(), broker.getPort());
+  				socket.setSendBufferSize(conf.getSendBufferSize());
+  				socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
+  				LOG.info("Connected to {}", socket);
+  				in = socket.getInputStream();
+  				out = socket.getOutputStream();
+  			} 
+  			catch (UnknownHostException e)
+  			{
+  				LOG.error("Error connecting to broker.", e);
+  			} 
+  			catch (IOException e)
+  			{
+  				LOG.error("Error connecting to broker.", e);
+  			}
+  		}
+
+  		lastMetadataRefresh = System.currentTimeMillis();
+  	}
+    
+    // Send accumulated messages
+    protected void sendMessage(MessageSetBuffer messageSetBuffer) {
+      try {
+        // New message, new id
+        correlationId++;
+
+        /* headers */
+        // Skip 4 bytes for the size
+        toSendBuffer.position(4);
+        // API key for produce
+        toSendBuffer.putShort(Constants.APIKEY_PRODUCE);
+        // Version
+        toSendBuffer.putShort(Constants.API_VERSION);
+        // Correlation Id
+        toSendBuffer.putInt(correlationId);
+        // Client Id
+        toSendBuffer.putShort(clientIdLength);
+        toSendBuffer.put(clientIdBytes);
+        // Required Acks
+        toSendBuffer.putShort(requiredAcks);
+        // Timeout in ms
+        toSendBuffer.putInt(brokerTimeout);
+        // Number of topics
+        toSendBuffer.putInt(1);
+        // Topic name
+        toSendBuffer.putShort(topicLength);
+        toSendBuffer.put(topicBytes);
+        // Number of partitions
+        toSendBuffer.putInt(1);
+        // Partition
+        toSendBuffer.putInt(partition);
+
+        if (compressor == null) {
+          // If we 're not compressing, then we can just dump the rest of the
+          // message here.
+
+          // Message set size
+          toSendBuffer.putInt(messageSetBuffer.getBuffer().position());
+
+          // Message set
+          toSendBuffer.put(messageSetBuffer.getBytes(), 0, messageSetBuffer
+              .getBuffer().position());
+
+        } else {
+          // If we are compressing, then do that.
+
+          // Message set size ? We'll have to do this later.
+          messageSetSizePos = toSendBuffer.position();
+          toSendBuffer.position(toSendBuffer.position() + 4);
+
+          // offset can be anything for produce requests. We'll use 0
+          toSendBuffer.putLong(0L);
+
+          // Skip 4 bytes for size, and 4 for crc
+          messageSizePos = toSendBuffer.position();
+          toSendBuffer.position(toSendBuffer.position() + 8);
+
+          toSendBuffer.put(Constants.MAGIC_BYTE); // magic number
+          toSendBuffer.put(compressor.getAttribute()); // Compression goes
+          // here.
+
+          // Add the key
+          toSendBuffer.putInt(keyLength);
+          toSendBuffer.put(keyBytes);
+
+          // Compress the value here, into the toSendBuffer
+          try {
+            messageCompressedSize = compressor.compress(messageSetBuffer.getBytes(), 0, messageSetBuffer.getBuffer().position(), toSendBytes, toSendBuffer.position() + 4);
+
+            if (messageCompressedSize == -1) {
+              // toSendBytes is too small to hold the compressed data
+              throw new IOException(
+                  "Not enough room in the send buffer for the compressed data.");
+            }
+          } catch (IOException e) {
+            LOG.error("Exception while compressing data.  (data lost).", e);
+            return;
+          }
+
+          // Write the size
+          toSendBuffer.putInt(messageCompressedSize);
+
+          // Update the send buffer position
+          toSendBuffer.position(toSendBuffer.position() + messageCompressedSize);
+
+          /** Go back and fill in the missing pieces **/
+          // Message Set Size
+          toSendBuffer.putInt(messageSetSizePos, toSendBuffer.position() - (messageSetSizePos + 4));
+
+          // Message Size
+          toSendBuffer.putInt(messageSizePos, toSendBuffer.position() - (messageSizePos + 4));
+
+          // Message CRC
+          crcSendMessage.reset();
+          crcSendMessage.update(toSendBytes, messageSizePos + 8, toSendBuffer.position() - (messageSizePos + 8));
+          toSendBuffer.putInt(messageSizePos + 4, (int) crcSendMessage.getValue());
+        }
+
+        // Fill in the complete message size
+        toSendBuffer.putInt(0, toSendBuffer.position() - 4);
+
+
+        // Send it!
+        retry = 0;
+        while (retry <= retries) {
+          try {
+            if (metadata == null || socket == null) {
+              updateMetaDataAndConnection(true);
+            }
+
+            // Send request
+            out.write(toSendBytes, 0, toSendBuffer.position());
+
+            if (requiredAcks != 0) {
+              // Check response
+              responseBuffer.clear();
+              in.read(responseBytes, 0, 4);
+              responseSize = responseBuffer.getInt();
+              if (responseBuffer.capacity() < responseSize) {
+                responseBytes = new byte[responseSize];
+                responseBuffer = ByteBuffer.wrap(responseBytes);
+              }
+              responseBuffer.clear();
+              in.read(responseBytes, 0, responseSize);
+
+              // Response bytes are
+              // - 4 byte correlation id
+              // - 4 bytes for number of topics. This is always 1 in this case.
+              // - 2 bytes for length of topic name.
+              // - topicLength bytes for topic
+              // - 4 bytes for number of partitions. Always 1.
+              // - 4 bytes for partition number (which we already know)
+              // - 2 bytes for error code (That's interesting to us)
+              // - 8 byte offset of the first message (we don't care).
+              // The only things we care about here are the correlation id (must
+              // match) and the error code (so we can throw an exception if it's
+              // not 0)
+              responseCorrelationId = responseBuffer.getInt();
+              if (responseCorrelationId != correlationId) {
+                throw new Exception("Correlation ID mismatch.  Expected "
+                    + correlationId + ", got " + responseCorrelationId);
+              }
+              responseErrorCode = responseBuffer.getShort(18 + topicLength);
+              if (responseErrorCode != KafkaError.NoError.getCode()) {
+                throw new Exception("Got error from broker. Error Code "
+                    + responseErrorCode + " ("
+                    + getErrorString(responseErrorCode) + ")");
+              }
+
+              // Clear the responses, if there is anything else to read
+              while (in.available() > 0) {
+                in.read(responseBytes, 0, responseBytes.length);
+              }
+            }
+
+            break;
+          } catch (Throwable t) {
+            metadata = null;
+
+            retry++;
+            if (retry <= retries) {
+              LOG.warn("Request failed. Retrying {} more times for {}.", retries - retry
+                  + 1, topicString, t);
+              try {
+                Thread.sleep(retryBackoffMs);
+              } catch (InterruptedException e) {
+                // Do nothing
+              }
+            } else {
+              LOG.error("Request failed. No more retries (data lost) for {}.", topicString, t);
+              mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
+              mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
+            }
+
+          }
+        }
+
+        toSendBuffer.clear();
+        mSent.mark(messageSetBuffer.getBatchSize());
+        mSentTotal.mark(messageSetBuffer.getBatchSize());
+
+        // Periodic metadata refreshes.
+        if ((topicMetadataRefreshIntervalMs >= 0 
+  			 && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs)) {
+          try {
+            updateMetaDataAndConnection(false);
+          } catch (Throwable t) {
+            LOG.error("Error refreshing metadata.", t);
+          }
+        }
+      } catch (Throwable t) {
+        LOG.error("Unexpected exception: {}", t);
+        mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
+        mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
+      }
+    }
+    
     @Override
     public void run() {
     	long sendStart = 0;
+    	
+    	
+      
     
     	String metricName = "krackle:producer:" + conf.topicName + ":thread_" + senderThreads.indexOf(Thread.currentThread().getId()) + ":blockSendTime(ms)";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
