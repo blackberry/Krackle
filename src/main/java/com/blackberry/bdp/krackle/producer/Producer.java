@@ -165,6 +165,9 @@ public class Producer {
     this.topicLength = (short) topicBytes.length;
 
     this.clientIdString = clientId;
+    this.clientIdBytes = clientId.getBytes(UTF8);
+    this.clientIdLength = (short) clientId.length();
+    
   
     this.keyString = key;
     this.keyBytes = key.getBytes(UTF8);
@@ -518,6 +521,7 @@ public class Producer {
     
     
     public Sender() {
+    	
       toSendBytes = new byte[sendBufferSize];
       toSendBuffer = ByteBuffer.wrap(toSendBytes);
       // We need this to be big enough to read the length of the first response,
