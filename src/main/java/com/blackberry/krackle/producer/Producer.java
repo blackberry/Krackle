@@ -210,11 +210,12 @@ public class Producer {
 
    
 
- // Create the sender obects and threads
+ // Create the sender objects and threads
     for (int i = 0; i < conf.getSenderThreads(); i++) {
     	sender = new Sender();
     	Thread senderThread = new Thread(sender);
     	senderThread.setDaemon(false);
+    	LOG.debug("[{}] Creating Sender Thread-{} ({})", topicString, i, senderThread.toString());
     	senderThread.setName("Sender-Thread-" + i);
     	senderThread.start();
     	senderThreads.add(senderThread);
@@ -715,6 +716,7 @@ public class Producer {
               updateMetaDataAndConnection(true);
             }
 
+            LOG.debug("[{}] Sender Thread-{} ({}) Sending Block", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId());	
             // Send request
             out.write(toSendBytes, 0, toSendBuffer.position());
 
@@ -809,7 +811,7 @@ public class Producer {
     	
       
     
-    	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread().getId()) + ":blockSendTime(ms)";
+    	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread()) + ":blockSendTime(ms)";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
           new Gauge<Integer>() {
             @Override
@@ -836,7 +838,7 @@ public class Producer {
           
           sendStart = System.nanoTime();
           sendMessage(buffer);
-          lastLatency = (int)(System.nanoTime() - sendStart * 1000000);
+          lastLatency = (int)((System.nanoTime() - sendStart) / 1000000);
           
           buffer.clear();
           freeBuffers.add(buffer);
