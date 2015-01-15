@@ -716,7 +716,7 @@ public class Producer {
               updateMetaDataAndConnection(true);
             }
 
-            LOG.debug("[{}] Sender Thread-{} ({}) Sending Block", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId());	
+            LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationID: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId);	
             // Send request
             out.write(toSendBytes, 0, toSendBuffer.position());
 
