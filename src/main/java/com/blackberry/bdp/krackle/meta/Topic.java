@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.meta;
+package com.blackberry.bdp.krackle.meta;
 
 import java.util.ArrayList;
 import java.util.List;

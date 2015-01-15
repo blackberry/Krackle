@@ -14,14 +14,38 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.consumer;
-
-import java.io.IOException;
+package com.blackberry.bdp.krackle.consumer;
 
 /**
- * Exception used to handle offset out of range errors being returned by a
- * broker.
+ * A simple class for holding a message as as byte array and an offset as a
+ * long.
  */
-public class OffsetOutOfRangeException extends IOException {
-  private static final long serialVersionUID = 1L;
+public class MessageAndOffset {
+  private byte[] message;
+  private long offset;
+
+  public MessageAndOffset() {
+  }
+
+  public MessageAndOffset(byte[] message, long offset) {
+    this.message = message;
+    this.offset = offset;
+  }
+
+  public byte[] getMessage() {
+    return message;
+  }
+
+  public void setMessage(byte[] message) {
+    this.message = message;
+  }
+
+  public long getOffset() {
+    return offset;
+  }
+
+  public void setOffset(long offset) {
+    this.offset = offset;
+  }
+
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.consumer;
+package com.blackberry.bdp.krackle.consumer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,11 +26,11 @@ import java.nio.charset.Charset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.krackle.Constants;
-import com.blackberry.krackle.KafkaError;
-import com.blackberry.krackle.MetricRegistrySingleton;
-import com.blackberry.krackle.meta.Broker;
-import com.blackberry.krackle.meta.MetaData;
+import com.blackberry.bdp.krackle.Constants;
+import com.blackberry.bdp.krackle.KafkaError;
+import com.blackberry.bdp.krackle.MetricRegistrySingleton;
+import com.blackberry.bdp.krackle.meta.Broker;
+import com.blackberry.bdp.krackle.meta.MetaData;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import java.net.SocketTimeoutException;

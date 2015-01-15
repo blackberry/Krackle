@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle;
+package com.blackberry.bdp.krackle;
 
 import java.util.concurrent.TimeUnit;
 

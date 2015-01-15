@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.producer;
+package com.blackberry.bdp.krackle.producer;
 
 import java.nio.ByteBuffer;
 
