@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.consumer;
+package com.blackberry.bdp.krackle.consumer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,10 +23,10 @@ import java.util.zip.CRC32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.krackle.Constants;
-import com.blackberry.krackle.compression.Decompressor;
-import com.blackberry.krackle.compression.GzipDecompressor;
-import com.blackberry.krackle.compression.SnappyDecompressor;
+import com.blackberry.bdp.krackle.Constants;
+import com.blackberry.bdp.krackle.compression.Decompressor;
+import com.blackberry.bdp.krackle.compression.GzipDecompressor;
+import com.blackberry.bdp.krackle.compression.SnappyDecompressor;
 
 public class MessageSetReader
 {

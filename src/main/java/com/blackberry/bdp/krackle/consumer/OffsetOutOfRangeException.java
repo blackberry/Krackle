@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.producer;
+package com.blackberry.bdp.krackle.consumer;
+
+import java.io.IOException;
 
 /**
- *
- * @author dariens
+ * Exception used to handle offset out of range errors being returned by a
+ * broker.
  */
-public class MissingPartitionsException extends Exception
-{
-
-	/**
-	 * @param error
-	 * @param e
-	 */
-	public MissingPartitionsException(String error, Exception e)
-	{
-		super(error, e);
-	}
-	
+public class OffsetOutOfRangeException extends IOException {
+  private static final long serialVersionUID = 1L;
 }

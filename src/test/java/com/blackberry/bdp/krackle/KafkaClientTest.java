@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle;
+package com.blackberry.bdp.krackle;
 
 import static org.junit.Assert.assertEquals;
 
@@ -35,11 +35,11 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.blackberry.krackle.consumer.ConsumerConfiguration;
-import com.blackberry.krackle.consumer.Consumer;
-import com.blackberry.krackle.meta.MetaData;
-import com.blackberry.krackle.producer.Producer;
-import com.blackberry.krackle.producer.ProducerConfiguration;
+import com.blackberry.bdp.krackle.consumer.ConsumerConfiguration;
+import com.blackberry.bdp.krackle.consumer.Consumer;
+import com.blackberry.bdp.krackle.meta.MetaData;
+import com.blackberry.bdp.krackle.producer.Producer;
+import com.blackberry.bdp.krackle.producer.ProducerConfiguration;
 import com.blackberry.testutil.LocalKafkaServer;
 import com.blackberry.testutil.LocalZkServer;
 

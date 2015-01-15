@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.consumer;
+package com.blackberry.bdp.krackle.consumer;
 
 /**
  *

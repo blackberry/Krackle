@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.compression;
+package com.blackberry.bdp.krackle.compression;
 
 import java.io.IOException;
 

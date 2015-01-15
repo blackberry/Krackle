@@ -14,38 +14,22 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.consumer;
+package com.blackberry.bdp.krackle.producer;
 
 /**
- * A simple class for holding a message as as byte array and an offset as a
- * long.
+ *
+ * @author dariens
  */
-public class MessageAndOffset {
-  private byte[] message;
-  private long offset;
+public class MissingPartitionsException extends Exception
+{
 
-  public MessageAndOffset() {
-  }
-
-  public MessageAndOffset(byte[] message, long offset) {
-    this.message = message;
-    this.offset = offset;
-  }
-
-  public byte[] getMessage() {
-    return message;
-  }
-
-  public void setMessage(byte[] message) {
-    this.message = message;
-  }
-
-  public long getOffset() {
-    return offset;
-  }
-
-  public void setOffset(long offset) {
-    this.offset = offset;
-  }
-
+	/**
+	 * @param error
+	 * @param e
+	 */
+	public MissingPartitionsException(String error, Exception e)
+	{
+		super(error, e);
+	}
+	
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.producer;
+package com.blackberry.bdp.krackle.producer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,15 +34,15 @@ import java.util.zip.CRC32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.krackle.Constants;
-import com.blackberry.krackle.KafkaError;
-import com.blackberry.krackle.MetricRegistrySingleton;
-import com.blackberry.krackle.compression.Compressor;
-import com.blackberry.krackle.compression.GzipCompressor;
-import com.blackberry.krackle.compression.SnappyCompressor;
-import com.blackberry.krackle.meta.Broker;
-import com.blackberry.krackle.meta.MetaData;
-import com.blackberry.krackle.meta.Topic;
+import com.blackberry.bdp.krackle.Constants;
+import com.blackberry.bdp.krackle.KafkaError;
+import com.blackberry.bdp.krackle.MetricRegistrySingleton;
+import com.blackberry.bdp.krackle.compression.Compressor;
+import com.blackberry.bdp.krackle.compression.GzipCompressor;
+import com.blackberry.bdp.krackle.compression.SnappyCompressor;
+import com.blackberry.bdp.krackle.meta.Broker;
+import com.blackberry.bdp.krackle.meta.MetaData;
+import com.blackberry.bdp.krackle.meta.Topic;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Metric;

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.compression;
+package com.blackberry.bdp.krackle.compression;
 
 import java.io.IOException;
 
 import org.xerial.snappy.Snappy;
 
-import com.blackberry.krackle.Constants;
+import com.blackberry.bdp.krackle.Constants;
 
 /**
  * Decompressor implementation that used the Snappy algorithm.

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.compression;
+package com.blackberry.bdp.krackle.compression;
 
 import java.io.IOException;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import com.blackberry.krackle.Constants;
+import com.blackberry.bdp.krackle.Constants;
 
 /**
  * Decompressor implementation that used the GZIP algorithm.
