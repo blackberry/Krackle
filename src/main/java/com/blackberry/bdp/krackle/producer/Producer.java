@@ -107,10 +107,6 @@ public class Producer {
   // for uncompressed messages (size + key length + topic length + 34?)
   // For compressed messages, this shouldn't need to be bigger.
   private int sendBufferSize;
-  private byte[] toSendBytes;
-
-
-
 
   // How to compress!
   Compressor compressor;
@@ -333,8 +329,6 @@ public class Producer {
 
     buffersToSend = new ArrayBlockingQueue<MessageSetBuffer>(numBuffers);
 
-    toSendBytes = new byte[sendBufferSize];
-
     if (compressionCodec.equals("none")) {
       compressor = null;
     } else if (compressionCodec.equals("snappy")) {
@@ -489,6 +483,7 @@ public class Producer {
     private MessageSetBuffer buffer;
     private int lastLatency = 0;
     private int correlationId = 0;
+    private byte[] toSendBytes;
     private ByteBuffer toSendBuffer;
     private int messageSetSizePos;
     private int messageSizePos;
@@ -523,16 +518,14 @@ public class Producer {
     
     
     public Sender() {
+      toSendBytes = new byte[sendBufferSize];
       toSendBuffer = ByteBuffer.wrap(toSendBytes);
-
       // We need this to be big enough to read the length of the first response,
       // then we can expand it to the appropriate size.
       responseBytes = new byte[4];
       responseBuffer = ByteBuffer.wrap(responseBytes);
-      this.clientThreadIdString = clientIdString + "-" + Thread.currentThread().getId();
-      this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
-      this.clientThreadIdLength = (short) clientThreadIdString.length();
-      
+
+     
       // Try to do this. If it fails, then we can try again when it's time to
       // send.
       try {
@@ -809,7 +802,9 @@ public class Producer {
     public void run() {
     	float sendStart = 0;
     	
-    	
+      this.clientThreadIdString = clientIdString + "-" + Thread.currentThread().getId();
+      this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
+      this.clientThreadIdLength = (short) clientThreadIdString.length();
       
     
     	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread()) + ":blockTransmitTime - ms";
