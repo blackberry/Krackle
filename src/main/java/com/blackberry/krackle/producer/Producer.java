@@ -806,12 +806,12 @@ public class Producer {
     
     @Override
     public void run() {
-    	long sendStart = 0;
+    	float sendStart = 0;
     	
     	
       
     
-    	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread()) + ":blockSendTime(ms)";
+    	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread()) + ":blockTransmitTime - ms";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
           new Gauge<Integer>() {
             @Override
@@ -838,11 +838,10 @@ public class Producer {
           
           sendStart = System.nanoTime();
           sendMessage(buffer);
-          lastLatency = (int)((System.nanoTime() - sendStart) / 1000000);
-          
+   
           buffer.clear();
           freeBuffers.add(buffer);
-
+          lastLatency = (int)((System.nanoTime() - sendStart) / 1000000);
         } catch (Throwable t) {
           LOG.error("Unexpected error", t);
         }
