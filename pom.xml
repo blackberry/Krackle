@@ -138,7 +138,6 @@ limitations under the License.
 				<configuration>
 					<doCheck>true</doCheck>
 					<doUpdate>true</doUpdate>		
-					<!--<scmBranchPropertyName>dev</scmBranchPropertyName>-->
 				</configuration>					
 			</plugin>
 			
