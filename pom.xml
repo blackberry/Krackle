@@ -19,7 +19,7 @@ limitations under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.blackberry.bdp.krackle</groupId>
-	<artifactId>krackle</artifactId>
+	<artifactId>krackle-dev</artifactId>
 	<version>0.7.7</version>
 	<packaging>jar</packaging>
 
@@ -137,7 +137,7 @@ limitations under the License.
 				</executions>
 				<configuration>
 					<doCheck>true</doCheck>
-					<doUpdate>true</doUpdate>		
+					<doUpdate>false</doUpdate>		
 				</configuration>					
 			</plugin>
 			
