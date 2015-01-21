@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 BlackBerry, Inc.
+ * Copyright 2014 BlackBerry, Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.compression;
+package com.blackberry.bdp.krackle.compression;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -22,7 +22,7 @@ import java.nio.ByteOrder;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
-import com.blackberry.krackle.Constants;
+import com.blackberry.bdp.krackle.Constants;
 
 /**
  * Compressor implementation that used the GZIP algorithm.

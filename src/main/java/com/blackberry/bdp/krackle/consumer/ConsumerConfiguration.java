@@ -1,13 +1,20 @@
 /**
- * Copyright 2014 BlackBerry, Inc.
+ * Copyright 2014 BlackBerry, Limited.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-package com.blackberry.krackle.consumer;
+
+package com.blackberry.bdp.krackle.consumer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -84,6 +91,7 @@ public class ConsumerConfiguration
 	private int fetchMinBytes;
 	private int socketReceiveBufferBytes;
 	private String autoOffsetReset;
+	private int socketTimeoutMs;
 
 	/**
 	 * Creates a new configuration from a given Properties object.
@@ -160,6 +168,14 @@ public class ConsumerConfiguration
 		autoOffsetReset = props.getProperty("auto.offset.reset", "largest");
 		
 		LOG.info("auto.offset.reset = {}", autoOffsetReset);
+		
+		socketTimeoutMs = Integer.parseInt(props.getProperty("socket.timeout.seconds", "" + (30 * 1000)));
+		
+		if (getSocketTimeoutMs() < 0)
+		{
+			throw new Exception("socket.timeout.seconds must be positive.");
+		}
+
 	}
 
 	public List<String> getMetadataBrokerList()
@@ -220,6 +236,22 @@ public class ConsumerConfiguration
 	public void setAutoOffsetReset(String autoOffsetReset)
 	{
 		this.autoOffsetReset = autoOffsetReset;
+	}
+
+	/**
+	 * @return the socketTimeoutMs
+	 */
+	public int getSocketTimeoutMs()
+	{
+		return socketTimeoutMs;
+	}
+
+	/**
+	 * @param socketTimeoutMs the socketTimeoutMs to set
+	 */
+	public void setSocketTimeoutMs(int socketTimeoutMs)
+	{
+		this.socketTimeoutMs = socketTimeoutMs;
 	}
 
 }

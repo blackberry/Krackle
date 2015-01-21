@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 BlackBerry, Inc.
+ * Copyright 2014 BlackBerry, Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.meta;
+package com.blackberry.bdp.krackle.meta;
 
 /**
  * Class to hold the id, host and port of a Kafka broker.
@@ -57,6 +57,11 @@ public class Broker {
     this.port = port;
   }
 
+  public String getNiceDescription()
+  {
+	  return "node " + nodeId + " @ " + host + ":" + port;
+  }
+  
   @Override
   public String toString() {
     return "Broker [nodeId=" + nodeId + ", host=" + host + ", port=" + port

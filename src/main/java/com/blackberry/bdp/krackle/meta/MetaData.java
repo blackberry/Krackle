@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 BlackBerry, Inc.
+ * Copyright 2014 BlackBerry, Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle.meta;
+package com.blackberry.bdp.krackle.meta;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.krackle.Constants;
+import com.blackberry.bdp.krackle.Constants;
 
 /**
  * Gather and store metadata for a topic.

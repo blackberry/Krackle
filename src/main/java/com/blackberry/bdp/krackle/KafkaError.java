@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.blackberry.krackle;
+package com.blackberry.bdp.krackle;
 
 /**
  * Enum of possible errors and error codes that could be returned by the broker.

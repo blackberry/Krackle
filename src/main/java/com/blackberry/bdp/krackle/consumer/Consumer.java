@@ -1,13 +1,20 @@
 /**
- * Copyright 2014 BlackBerry, Inc.
+ * Copyright 2014 BlackBerry, Limited.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-package com.blackberry.krackle.consumer;
+
+package com.blackberry.bdp.krackle.consumer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,13 +26,14 @@ import java.nio.charset.Charset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blackberry.krackle.Constants;
-import com.blackberry.krackle.KafkaError;
-import com.blackberry.krackle.MetricRegistrySingleton;
-import com.blackberry.krackle.meta.Broker;
-import com.blackberry.krackle.meta.MetaData;
+import com.blackberry.bdp.krackle.Constants;
+import com.blackberry.bdp.krackle.KafkaError;
+import com.blackberry.bdp.krackle.MetricRegistrySingleton;
+import com.blackberry.bdp.krackle.meta.Broker;
+import com.blackberry.bdp.krackle.meta.MetaData;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import java.net.SocketTimeoutException;
 
 /**
  * An implementation of the Kafka 0.8 consumer.
@@ -48,7 +56,7 @@ public class Consumer
 	private String topic;
 	private byte[] topicBytes;
 	private short topicLength;
-
+	private Broker broker;
 	private int partition;
 
 	private MessageSetReader messageSetReader = new MessageSetReader();
@@ -109,7 +117,7 @@ public class Consumer
 	 * @param partition id of the partition to read from.
 	 */
 	
-	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition)
+	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition) throws BrokerUnavailableException
 	{
 		this(conf, clientId, topic, partition, 0L);
 	}
@@ -124,7 +132,7 @@ public class Consumer
 	 * @param offset the offset to start reading from.
 	 */
 	
-	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset)
+	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset) throws BrokerUnavailableException
 	{
 		this(conf, clientId, topic, partition, offset, null);
 	}
@@ -142,7 +150,7 @@ public class Consumer
 	 * @param metrics the instance of MetricRegistry to use for reporting metrics.
 	 */
 	
-	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics)
+	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics) throws BrokerUnavailableException
 	{
 		LOG.info("[{}-{}] creating consumer for  from offset {}", topic, partition, offset);
 
@@ -224,46 +232,55 @@ public class Consumer
 	 * @throws IOException
 	 */
 	
-	public int getMessage(byte[] buffer, int pos, int maxLength) throws IOException
+	public int getMessage(byte[] buffer, int pos, int maxLength) throws IOException, BrokerUnavailableException
 	{
 		mMessageRequests.mark();
 		mMessageRequestsTotal.mark();
 
-		if (messageSetReader == null || messageSetReader.isReady() == false)
+		try
 		{
-			readFromBroker();
-
 			if (messageSetReader == null || messageSetReader.isReady() == false)
+			{
+				readFromBroker();
+
+				if (messageSetReader == null || messageSetReader.isReady() == false)
+				{
+					mMessageRequestsNoData.mark();
+					mMessageRequestsNoDataTotal.mark();
+					return -1;
+				}
+			}
+
+			bytesReturned = messageSetReader.getMessage(buffer, pos, maxLength);
+
+			if (bytesReturned == -1)
 			{
 				mMessageRequestsNoData.mark();
 				mMessageRequestsNoDataTotal.mark();
 				return -1;
 			}
+
+			lastOffset = messageSetReader.getOffset();
+			offset = messageSetReader.getNextOffset();
+
+			//LOG.info("message received from messageSetReader latOffset {} offset {}" , lastOffset, offset);
+
+			mMessagesReturned.mark();
+			mMessagesReturnedTotal.mark();
+			mBytesReturned.mark(bytesReturned);
+			mBytesReturnedTotal.mark(bytesReturned);
+
+			return bytesReturned;
 		}
-
-		bytesReturned = messageSetReader.getMessage(buffer, pos, maxLength);
-
-		if (bytesReturned == -1)
+		catch (SocketTimeoutException e)
 		{
-			mMessageRequestsNoData.mark();
-			mMessageRequestsNoDataTotal.mark();
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
 			return -1;
-		}
-
-		lastOffset = messageSetReader.getOffset();
-		offset = messageSetReader.getNextOffset();
-		
-		//LOG.info("message received from messageSetReader latOffset {} offset {}" , lastOffset, offset);
-
-		mMessagesReturned.mark();
-		mMessagesReturnedTotal.mark();
-		mBytesReturned.mark(bytesReturned);
-		mBytesReturnedTotal.mark(bytesReturned);
-
-		return bytesReturned;
+		}		
 	}
 	
-	private void readFromBroker() throws IOException
+	private void readFromBroker() throws IOException, BrokerUnavailableException
 	{
 		mBrokerReadAttempts.mark();
 		mBrokerReadAttemptsTotal.mark();
@@ -273,6 +290,7 @@ public class Consumer
 			LOG.info("[{}-{}] Connecting to broker", topic, partition);
 			connectToBroker();
 		}
+		
 		try
 		{
 			correlationId++;
@@ -282,7 +300,12 @@ public class Consumer
 
 			mBrokerReadSuccess.mark();
 			mBrokerReadSuccessTotal.mark();
-		} 
+		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}", topic, partition, broker.getNiceDescription());
+			connectToBroker();
+		}
 		catch (OffsetOutOfRangeException e)
 		{
 			mBrokerReadFailure.mark();
@@ -329,13 +352,18 @@ public class Consumer
 		}
 	}
 
-	public long getEarliestOffset()
+	public long getEarliestOffset() throws BrokerUnavailableException
 	{
 		try
 		{
 			correlationId++;
 			sendOffsetRequest(Constants.EARLIEST_OFFSET, correlationId);
 			return getOffsetResponse(correlationId);
+		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
 		}
 		catch (IOException e)
 		{
@@ -344,13 +372,18 @@ public class Consumer
 		return 0L;
 	}
 
-	public long getLatestOffset()
+	public long getLatestOffset() throws BrokerUnavailableException
 	{
 		try
 		{
 			correlationId++;
 			sendOffsetRequest(Constants.LATEST_OFFSET, correlationId);
 			return getOffsetResponse(correlationId);
+		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
 		}
 		catch (IOException e)
 		{
@@ -409,7 +442,7 @@ public class Consumer
 		brokerOut.write(offsetRequestBytes, 0, offsetRequestBuffer.position());
 	}
 
-	private long getOffsetResponse(int correlationId) throws IOException
+	private long getOffsetResponse(int correlationId) throws IOException, BrokerUnavailableException
 	{
 		LOG.debug("[{}-{}] waiting for response. correlation id = {}", topic, partition, correlationId);
 
@@ -472,6 +505,12 @@ public class Consumer
 			return offsetResponseBuffer.getLong();
 
 		} 
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}: {}", topic, partition, broker.getNiceDescription(), e);
+			connectToBroker();
+			return -1;
+		}
 		finally
 		{
 			// Clean out any other data that is sitting on the socket to be  read. 
@@ -629,32 +668,55 @@ public class Consumer
 		}
 	}
 
-	private void connectToBroker()
+	private void connectToBroker() throws BrokerUnavailableException
 	{
-		while (true)
+		long backoff = 1000;
+		long retries = 5;
+		long attempt = 1;
+		Boolean stopping = false;
+
+		while(!stopping)
 		{
 			try
 			{
 				MetaData meta = MetaData.getMetaData(conf.getMetadataBrokerList(), topic, clientId);
-				Broker leader = meta.getBroker(meta.getTopic(topic).getPartition(partition).getLeader());
-
-				LOG.info("[{}-{}] connecting to broker {} @ {}:{}", topic, partition, leader.getNodeId(), leader.getHost(), leader.getPort());
+				broker = meta.getBroker(meta.getTopic(topic).getPartition(partition).getLeader());
 				
-				brokerSocket = new Socket(leader.getHost(), leader.getPort());
+				LOG.info("[{}-{}] connecting to broker {}", topic, partition, broker.getNiceDescription());
+				
+				brokerSocket = new Socket( broker.getHost(), broker.getPort());
+				brokerSocket.setSoTimeout(conf.getSocketTimeoutMs());
 				brokerSocket.setReceiveBufferSize(conf.getSocketReceiveBufferBytes());
 				brokerIn = brokerSocket.getInputStream();
 				brokerOut = brokerSocket.getOutputStream();
+				
+				LOG.info("[{}-{}] successfully connected to broker {} and set a timeout of {}", 
+					 topic, partition, broker.getNiceDescription(), conf.getSocketTimeoutMs());
 
 				break;
 			} 
 			catch (Exception e)
 			{
-				LOG.error("[{}-{}] error connecting to broker.", topic, partition, e);
-				try
+				if (attempt < retries)
 				{
-					Thread.sleep(100);
+					LOG.error("[{}-{}] error connecting to broker on attempt {}/{}, retrying in {} seconds... error message was: ", 
+						 topic, partition, attempt, retries, (backoff / 1000), e);
+					try 
+					{
+						Thread.sleep(backoff);
+					}
+					catch (InterruptedException ie) 
+					{
+						stopping = true;
+					}
+					
+					backoff *= 2;
+					attempt++;
 				} 
-				catch (InterruptedException e1) { }
+				else
+				{
+					throw new BrokerUnavailableException("Failed to connect to broker, no retries left--giving up", e);
+				}
 			}
 		}
 	}
@@ -674,7 +736,7 @@ public class Consumer
 		return highWaterMark;
 	}
 	
-	public void setNextOffset(long nextOffset) throws IOException
+	public void setNextOffset(long nextOffset) throws IOException, BrokerUnavailableException
 	{
 		LOG.info("[{}-{}] request to set the next offset to {} received", topic, partition, nextOffset);
 		
@@ -682,8 +744,16 @@ public class Consumer
 		
 		correlationId++;
 
-		sendConsumeRequest(correlationId);
-		receiveConsumeResponse(correlationId);
+		try
+		{
+			sendConsumeRequest(correlationId);
+			receiveConsumeResponse(correlationId);
+		}
+		catch (SocketTimeoutException e)
+		{
+			LOG.error("[{}-{}] socket timeout to {}", topic, partition, broker.getNiceDescription());
+			connectToBroker();
+		}
 		
 		LOG.info("[{}-{}] successfully set the next offset to {} via correlation ID {}", topic, partition, nextOffset, correlationId);
 	}
