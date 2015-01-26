@@ -1,6 +1,9 @@
 Changes in Krackle 0.7.8
 
 - Fixes partition rotation.  Quick rotate is no longer a supported configuration item.  Instead all topic meta data refreshes will rotate partitions and if quicker rotation is required than topic.metadata.refresh.interval.ms can be configured accordingly.
+- Fixes permission issues in the RPM creation with directories being created as 644 and not 755
+- Defaults user 'klogger' in config/klogger-env.sh
+- Reduces heap size to 2GB (from 5GB)' in config/klogger-env.sh
 
 Changes in Krackle 0.7.7:
 
