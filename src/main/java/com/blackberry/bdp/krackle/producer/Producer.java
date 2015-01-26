@@ -555,10 +555,10 @@ public class Producer {
   			throw new MissingPartitionsException(String.format("Topic %s has zero partitions", topicString), null);
   		}
   		
-  		// If we have rotateParitions set, add one to the modifier
-  		if (rotatePartitions && !force)
-  		{
+  		if (!force)
+  		{			
   			partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+			LOG.info("Metadata and connection refresh called without force, partition modifier is now: {}", partitionModifier);
   		}
 
   		partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
