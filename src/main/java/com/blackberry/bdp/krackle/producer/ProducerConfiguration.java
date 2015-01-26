@@ -76,7 +76,7 @@ import org.slf4j.LoggerFactory;
  *
  * <tr>
  * <td>topic.metadata.refresh.interval.ms</td>
- * <td>600 * 1000</td>
+ * <td>60 * 10 * 1000</td>
  * <td>The producer generally refreshes the topic metadata from brokers when there is a failure (partition missing, leader not available...). It will also poll regularly (default: every 10min so 600000ms). If you set this to a negative value, metadata will only get refreshed on failure. If you set this to zero, the metadata will get refreshed after each message sent (not recommended). Important note: the refresh happen only AFTER the message is sent, so if the producer never sends a message the metadata is never refreshed</td>
  * </tr>
  *
@@ -104,8 +104,14 @@ import org.slf4j.LoggerFactory;
  *
  * <tr>
  * <td>send.buffer.size</td>
- * <td>1.5*1024*1024</td>
+ * <td>1.5 * 1024 * 1024</td>
  * <td>Size of the byte buffer used to store the final (with headers and compression applied) data to be sent to the broker.</td>
+ *
+ * </tr>
+ * <tr>
+ * <td>sender.threads</td>
+ * <td>1</td>
+ * <td>How many threads to use for sending to the broker.  A larger number can be useful for higher latency high volume topics however message order cannot be guaranteed</td>
  * </tr>
  *
  * <tr>
@@ -205,6 +211,11 @@ public class ProducerConfiguration
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
 	}	
 	
+	/**
+	 *
+	 * @param propName the property name to obtain a topic aware override for
+	 * @return The name of the property 
+	 */
 	public String getTopicAwarePropName (String propName)
 	{
 		if (getTopicName() == null)
@@ -225,7 +236,7 @@ public class ProducerConfiguration
 	
 	private List<String> parseMetadataBrokerList(String propName) throws Exception
 	{
-		List<String> myMetadataBrokerList = new ArrayList<String>();		
+		List<String> myMetadataBrokerList = new ArrayList<>();		
 		String propNameBrokerList = getTopicAwarePropName(propName);		
 		String metadataBrokerListString = props.getProperty(propNameBrokerList);
 		
@@ -462,151 +473,271 @@ public class ProducerConfiguration
 		return myQueueEnqueueTimeoutMs;
 	}	
 
+	/**
+	 *
+	 * @return the metadata broker list
+	 */
 	public List<String> getMetadataBrokerList()
 	{
 		return metadataBrokerList;
 	}
 
+	/**
+	 *
+	 * @param metadataBrokerList the metadata broker list
+	 */
 	public void setMetadataBrokerList(List<String> metadataBrokerList)
 	{
 		this.metadataBrokerList = metadataBrokerList;
 	}
 
+	/**
+	 *
+	 * @return the queue  buffering max milliseconds
+	 */
 	public long getQueueBufferingMaxMs()
 	{
 		return queueBufferingMaxMs;
 	}
 
+	/**
+	 *
+	 * @param queueBufferingMaxMs the queue  buffering max milliseconds
+	 */
 	public void setQueueBufferingMaxMs(long queueBufferingMaxMs)
 	{
 		this.queueBufferingMaxMs = queueBufferingMaxMs;
 	}
 
+	/**
+	 *
+	 * @return the request required acks
+	 */
 	public short getRequestRequiredAcks()
 	{
 		return requestRequiredAcks;
 	}
 
+	/**
+	 *
+	 * @param requestRequiredAcks the request required acks
+	 */
 	public void setRequestRequiredAcks(short requestRequiredAcks)
 	{
 		this.requestRequiredAcks = requestRequiredAcks;
 	}
 
+	/**
+	 *
+	 * @return the request timeout milliseconds
+	 */
 	public int getRequestTimeoutMs()
 	{
 		return requestTimeoutMs;
 	}
 
+	/**
+	 *
+	 * @param requestTimeoutMs the request timeout milliseconds
+	 */
 	public void setRequestTimeoutMs(int requestTimeoutMs)
 	{
 		this.requestTimeoutMs = requestTimeoutMs;
 	}
 
+	/**
+	 *
+	 * @return message send max retries
+	 */
 	public int getMessageSendMaxRetries()
 	{
 		return messageSendMaxRetries;
 	}
 
+	/**
+	 *
+	 * @param messageSendMaxRetries message send max retries
+	 */
 	public void setMessageSendMaxRetries(int messageSendMaxRetries)
 	{
 		this.messageSendMaxRetries = messageSendMaxRetries;
 	}
 
+	/**
+	 *
+	 * @return the number of threads sending to the broker
+	 */
 	public int getSenderThreads()
 	{
 		return senderThreads;
 	}
 	
+	/**
+	 *
+	 * @param senderThreads the number of threads sending to the broker
+	 */
 	public void setSenderThreads (int senderThreads)
 	{
 		this.senderThreads = senderThreads;
 	}
 	
+	/**
+	 *
+	 * @return milliseconds to back off for when retrying
+	 */
 	public int getRetryBackoffMs()
 	{
 		return retryBackoffMs;
 	}
 
+	/**
+	 *
+	 * @param retryBackoffMs milliseconds to back off for when retrying
+	 */
 	public void setRetryBackoffMs(int retryBackoffMs)
 	{
 		this.retryBackoffMs = retryBackoffMs;
 	}
 
+	/**
+	 *
+	 * @return message buffer size
+	 */
 	public int getMessageBufferSize()
 	{
 		return messageBufferSize;
 	}
 
+	/**
+	 *
+	 * @param messageBufferSize message buffer size
+	 */
 	public void setMessageBufferSize(int messageBufferSize)
 	{
 		this.messageBufferSize = messageBufferSize;
 	}
 
+	/**
+	 *
+	 * @return are shared buffers being used?
+	 */
 	public boolean isUseSharedBuffers()
 	{
 		return useSharedBuffers;
 	}
 
+	/**
+	 *
+	 * @param useSharedBuffers the shared buffer use
+	 */
 	public void setUseSharedBuffers(boolean useSharedBuffers)
 	{
 		this.useSharedBuffers = useSharedBuffers;
 	}
 
+	/**
+	 *
+	 * @return the number of buffers
+	 */
 	public int getNumBuffers()
 	{
 		return numBuffers;
 	}
 
+	/**
+	 *
+	 * @param numBuffers the number of buffers
+	 */
 	public void setNumBuffers(int numBuffers)
 	{
 		this.numBuffers = numBuffers;
 	}
 
+	/**
+	 *
+	 * @return the send buffer size
+	 */
 	public int getSendBufferSize()
 	{
 		return sendBufferSize;
 	}
 
+	/**
+	 *
+	 * @param sendBufferSize the send buffer size
+	 */
 	public void setSendBufferSize(int sendBufferSize)
 	{
 		this.sendBufferSize = sendBufferSize;
 	}
 
+	/**
+	 *
+	 * @return the compression codec used
+	 */
 	public String getCompressionCodec()
 	{
 		return compressionCodec;
 	}
 
+	/**
+	 *
+	 * @param compressionCodec the compression codec used
+	 */
 	public void setCompressionCodec(String compressionCodec)
 	{
 		this.compressionCodec = compressionCodec;
 	}
 
+	/**
+	 *
+	 * @return the compression level
+	 */
 	public int getCompressionLevel()
 	{
 		return compressionLevel;
 	}
 
+	/**
+	 *
+	 * @param compressionLevel the compression level
+	 */
 	public void setCompressionLevel(int compressionLevel)
 	{
 		this.compressionLevel = compressionLevel;
 	}
 
+	/**
+	 *
+	 * @return the topic metadata refresh interval in milliseconds
+	 */
 	public long getTopicMetadataRefreshIntervalMs()
 	{
 		return topicMetadataRefreshIntervalMs;
 	}
 
+	/**
+	 *
+	 * @param topicMetadataRefreshIntervalMs the topic metadata refresh interval in milliseconds
+	 */
 	public void setTopicMetadataRefreshIntervalMs(long topicMetadataRefreshIntervalMs)
 	{
 		this.topicMetadataRefreshIntervalMs = topicMetadataRefreshIntervalMs;
 	}
 
+	/**
+	 *
+	 * @return the queue enqueue timeout milliseconds
+	 */
 	public long getQueueEnqueueTimeoutMs()
 	{
 		return queueEnqueueTimeoutMs;
 	}
 
+	/**
+	 *
+	 * @param queueEnqueueTimeoutMs the queue enqueue timeout milliseconds
+	 */
 	public void setQueueEnqueueTimeoutMs(long queueEnqueueTimeoutMs)
 	{
 		this.queueEnqueueTimeoutMs = queueEnqueueTimeoutMs;
