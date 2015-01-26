@@ -1,3 +1,7 @@
+Changes in Krackle 0.7.8
+
+- Fixes partition rotation.  Quick rotate is no longer a supported configuration item.  Instead all topic meta data refreshes will rotate partitions and if quicker rotation is required than topic.metadata.refresh.interval.ms can be configured accordingly.
+
 Changes in Krackle 0.7.7:
 
 - Adds a new BrokerUnavailableException exception
