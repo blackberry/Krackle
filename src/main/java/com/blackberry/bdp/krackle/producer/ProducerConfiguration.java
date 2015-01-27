@@ -144,6 +144,12 @@ import org.slf4j.LoggerFactory;
  * </tr>
  *
  * </table>
+ * 
+ * <p><b>NOTE: Quick rotate, rotate, and partition rotation in General</b></p>
+ 
+ * <p>Quick rotate is no longer a supported configuration item.  Instead all topic meta data refreshes will rotate partitions and if quicker rotation is required than topic.metadata.refresh.interval.ms can be configured accordingly.  Regular topic specific overrides are possible as well for topics that require faster rotaiton.</p>
+ 
+ * 
  */
 
 public class ProducerConfiguration
