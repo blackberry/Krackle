@@ -22,6 +22,9 @@ import org.slf4j.LoggerFactory;
  *
  * Many of these properties are the same as those in the standard Java client, as documented at http://kafka.apache.org/documentation.html#producerconfigs
  *
+ * <p><b>NOTE:</b> Every single one of these properties can be overwritten for a specific topic by using the following property patten:</p>
+ * <p>source.&lt;<i>topic</i>&gt.&lt;<i>property</i>&gt</p>
+ *  
  * Valid properties are
  * <table>
  *
