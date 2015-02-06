@@ -213,7 +213,7 @@ public class ProducerConfiguration
 		messageSendMaxRetries = parseMessageSendMaxRetries("message.send.max.retries", "3");
 		retryBackoffMs = parseRetryBackoffMs("retry.backoff.ms", "100");
 		topicMetadataRefreshIntervalMs = parseTopicMetadataRefreshIntervalMs("topic.metadata.refresh.interval.ms", "" + (60 * 10 * 1000));
-		partitionsRotate = parsePartitionsRotate("partitions.rotate", "false");
+		partitionsRotate = parsePartitionsRotate("partitions.rotate", "random");
 		sendBufferSize = parseSendBufferSize("send.buffer.size", "" + (int) (1.5 * 1024 * 1024));	
 		compressionCodec = parseCompressionCodec("compression.codec", "none");
 		compressionLevel = parsecCmpressionLevel("gzip.compression.level", "" + Deflater.DEFAULT_COMPRESSION);
