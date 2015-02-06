@@ -169,6 +169,7 @@ public class ProducerConfiguration
 	private int messageSendMaxRetries;
 	private int retryBackoffMs;
 	private int senderThreads;
+	private int partitionsRotate;
 	private long topicMetadataRefreshIntervalMs;
 	private long queueBufferingMaxMs;
 	private long queueEnqueueTimeoutMs;
@@ -212,6 +213,7 @@ public class ProducerConfiguration
 		messageSendMaxRetries = parseMessageSendMaxRetries("message.send.max.retries", "3");
 		retryBackoffMs = parseRetryBackoffMs("retry.backoff.ms", "100");
 		topicMetadataRefreshIntervalMs = parseTopicMetadataRefreshIntervalMs("topic.metadata.refresh.interval.ms", "" + (60 * 10 * 1000));
+		partitionsRotate = parsePartitionsRotate("partitions.rotate", "false");
 		sendBufferSize = parseSendBufferSize("send.buffer.size", "" + (int) (1.5 * 1024 * 1024));	
 		compressionCodec = parseCompressionCodec("compression.codec", "none");
 		compressionLevel = parsecCmpressionLevel("gzip.compression.level", "" + Deflater.DEFAULT_COMPRESSION);
@@ -351,6 +353,27 @@ public class ProducerConfiguration
 		Long myTopicMetadataRefreshIntervalMs = Long.parseLong(props.getProperty(propNameTopicMetadataRefreshIntervalMs, defaultValue));		
 		LOG.info("{} = {}", propNameTopicMetadataRefreshIntervalMs, myTopicMetadataRefreshIntervalMs);		
 		return myTopicMetadataRefreshIntervalMs;
+	}
+	
+	private int parsePartitionsRotate(String propName, String defaultValue) throws Exception
+	{
+		String propNamePartitionsRotate = getTopicAwarePropName(propName);
+		
+		String myPartitionsRotateString = props.getProperty(propNamePartitionsRotate, defaultValue);
+		int myPartitionsRotate = 0;
+		
+		if (myPartitionsRotateString.compareToIgnoreCase("false") == 0) {
+			myPartitionsRotate = 0;
+		}	else if (myPartitionsRotateString.compareToIgnoreCase("true") == 0) {
+			myPartitionsRotate = 1;
+		}else if (myPartitionsRotateString.compareToIgnoreCase("random") == 0) {
+			myPartitionsRotate = 2;
+		} else {
+			throw new Exception(String.format("%s must be one of false, true, random.  Got %s", propNamePartitionsRotate, myPartitionsRotateString));
+		}
+				
+		LOG.info("{} = {}", propNamePartitionsRotate, myPartitionsRotateString);		
+		return myPartitionsRotate;
 	}
 	
 	private int parseSenderThreads(String propName, String defaultValue) throws Exception
@@ -736,6 +759,22 @@ public class ProducerConfiguration
 		this.topicMetadataRefreshIntervalMs = topicMetadataRefreshIntervalMs;
 	}
 
+	/**
+	 *
+	 * @return the type of partitions rotation to use
+	 */
+	public int getPartitionsRotate() {
+		return partitionsRotate;
+	}
+	
+	/**
+	 *
+	 * @param the type of partitions rotation to use
+	 */
+	public void setPartitionsRotate(int partitionsRotate) {
+		this.partitionsRotate = partitionsRotate;
+	}
+	
 	/**
 	 *
 	 * @return the queue enqueue timeout milliseconds
