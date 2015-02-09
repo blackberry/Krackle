@@ -24,6 +24,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -76,7 +77,6 @@ public class Producer {
   private short clientIdLength;
 
   private String keyString;
-  private boolean rotatePartitions;
   private int partitionModifier;
   private byte[] keyBytes;
   private int keyLength;
@@ -492,7 +492,7 @@ public class Producer {
     private int messageSizePos;
     private int messageCompressedSize;
     private CRC32 crcSendMessage = new CRC32();
-    
+    private Random rand = new Random();
     
     // Buffer for reading responses from the server.
     private byte[] responseBytes;
@@ -555,10 +555,16 @@ public class Producer {
   			throw new MissingPartitionsException(String.format("Topic %s has zero partitions", topicString), null);
   		}
   		
-  		if (!force)
-  		{			
-  			partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
-			LOG.info("Metadata and connection refresh called without force, partition modifier is now: {}", partitionModifier);
+  		if (!force) {
+  			//We don't rotate if it's a forced meta-data refresh, as we would have a block in the queue waiting to send
+  			if(conf.getPartitionsRotate() == 1) {
+  				//rotate sequentially
+  				partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+  				LOG.info("Metadata and connection refresh called without force, partition modifier is now: {}", partitionModifier);
+  			} else if (conf.getPartitionsRotate() == 2) {
+  				//pick a random number to increase partitions by
+  				partitionModifier = rand.nextInt(topic.getNumPartitions());
+  			}
   		}
 
   		partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
@@ -836,12 +842,12 @@ public class Producer {
             continue;
           }
           
-          sendStart = System.nanoTime();
+          sendStart = System.currentTimeMillis();
           sendMessage(buffer);
    
           buffer.clear();
           freeBuffers.add(buffer);
-          lastLatency = (int)((System.nanoTime() - sendStart) / 1000000);
+          lastLatency = (int)(System.currentTimeMillis() - sendStart);
         } catch (Throwable t) {
           LOG.error("Unexpected error", t);
         }
