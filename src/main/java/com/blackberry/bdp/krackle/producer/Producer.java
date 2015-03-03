@@ -229,6 +229,7 @@ public class Producer {
       	ArrayList<Thread> toAdd = new ArrayList<Thread>();
 
       	for(Thread senderThread : senderThreads) {
+      			
       		if (senderThread == null || senderThread.isAlive() == false) {
 				Sender sender = new Sender();
       			toRemove.add(senderThread);
@@ -553,7 +554,7 @@ public class Producer {
 	 
 	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
-  		LOG.info("Updating metadata");		
+  		LOG.info("{} - Updating metadata", Thread.currentThread().getName());		
   		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString );		
   		LOG.debug("Metadata: {}", metadata);
   		Topic topic = metadata.getTopic(topicString);
@@ -820,10 +821,11 @@ public class Producer {
     public void run() {
     	float sendStart = 0;
     	
+    	
       this.clientThreadIdString = clientIdString + "-" + Thread.currentThread().getId();
       this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
       this.clientThreadIdLength = (short) clientThreadIdString.length();
-      
+      LOG.debug("Starting Run Of Sender Thread: " + Thread.currentThread().getName()+ "-"+ Thread.currentThread().getId());
     
     	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread()) + ":blockTransmitTime - ms";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
@@ -860,6 +862,7 @@ public class Producer {
           LOG.error("Unexpected error", t);
         }
       }
+    	LOG.debug("Finishing Run Of Sender Thread: " + Thread.currentThread().getId());
     }
 
   }
