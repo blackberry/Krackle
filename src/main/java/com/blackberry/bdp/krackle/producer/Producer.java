@@ -839,6 +839,7 @@ public class Producer {
     	while (true) {
         try {
           if (closed && buffersToSend.isEmpty()) {
+		LOG.warn("Closed && buffersToSend.isEmpty() so we are shutting down!");
             break;
           }
 
