@@ -162,6 +162,8 @@ public class Producer {
 	 
     clientId = clientId + "-" + Long.toHexString(Double.doubleToLongBits(Math.random()));	
 
+	LOG.info("Client ID: {}", clientId);
+	 
     this.topicString = topic;
     this.topicBytes = topic.getBytes(UTF8);
     this.topicLength = (short) topicBytes.length;
@@ -226,7 +228,7 @@ public class Producer {
       	for(Thread senderThread : senderThreads) {
       		if (senderThread == null || senderThread.isAlive() == false) {
       			toRemove.add(senderThread);
-      			LOG.error("[{}] Sender thread {} is dead! Restarting it.", topicString, senderThread.getName());
+      			LOG.error("[{}] Sender thread {} clientId {}  is dead! Restarting it.", topicString, senderThread.getName(), clientIdString);
       			senderThread = new Thread(sender);
       			senderThread.setDaemon(false);
       			senderThread.setName("Sender-Thread-" + senderThread.getId());
