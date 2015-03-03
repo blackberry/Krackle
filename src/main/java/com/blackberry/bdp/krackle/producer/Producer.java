@@ -160,7 +160,10 @@ public class Producer {
 
     this.conf = conf;
 	 
-    clientId = clientId + "-" + Long.toHexString(Double.doubleToLongBits(Math.random()));	
+    Random rand = new Random();
+	int randomNum = rand.nextInt((100 - 1) + 1) + 1;
+ 
+	 clientId = clientId + randomNum;
 
 	LOG.info("Client ID: {}", clientId);
 	 
