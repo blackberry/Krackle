@@ -118,7 +118,7 @@ public class Producer {
 
 
 
-  private Sender sender = null;
+  //private Sender sender = null;
   private ArrayList<Thread> senderThreads = new ArrayList<>();
   private ArrayList<Sender> senders = new ArrayList<>();
 
@@ -159,7 +159,11 @@ public class Producer {
     LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
     this.conf = conf;
+	 
+    clientId = clientId + "-" + Long.toHexString(Double.doubleToLongBits(Math.random()));	
 
+	LOG.info("Client ID: {}", clientId);
+	 
     this.topicString = topic;
     this.topicBytes = topic.getBytes(UTF8);
     this.topicLength = (short) topicBytes.length;
@@ -203,7 +207,7 @@ public class Producer {
 
  // Create the sender objects and threads
     for (int i = 0; i < conf.getSenderThreads(); i++) {
-    	sender = new Sender();
+    	Sender sender = new Sender();
     	Thread senderThread = new Thread(sender);
     	senderThread.setDaemon(false);
     	LOG.debug("[{}] Creating Sender Thread-{} ({})", topicString, i, senderThread.toString());
@@ -224,8 +228,9 @@ public class Producer {
       	for(Thread senderThread : senderThreads) {
       			
       		if (senderThread == null || senderThread.isAlive() == false) {
+				Sender sender = new Sender();
       			toRemove.add(senderThread);
-      			LOG.error("[{}] Sender thread {} is dead! Restarting it.", topicString, senderThread.getName());
+      			LOG.error("[{}] Sender thread {} clientId {}  is dead! Restarting it.", topicString, senderThread.getName(), clientIdString);
       			senderThread = new Thread(sender);
       			senderThread.setDaemon(false);
       			senderThread.setName("Sender-Thread-" + senderThread.getId());
@@ -544,9 +549,7 @@ public class Producer {
      
     }
 	 
-	 // Dave made this synchonized to try to prevent sender threads from crashing... *shurgs*
-    
-  	private synchronized void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
+	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
   		LOG.info("Updating metadata");		
   		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString );		
