@@ -222,6 +222,7 @@ public class Producer {
       	ArrayList<Thread> toAdd = new ArrayList<Thread>();
 
       	for(Thread senderThread : senderThreads) {
+      			
       		if (senderThread == null || senderThread.isAlive() == false) {
       			toRemove.add(senderThread);
       			LOG.error("[{}] Sender thread {} is dead! Restarting it.", topicString, senderThread.getName());
@@ -814,10 +815,11 @@ public class Producer {
     public void run() {
     	float sendStart = 0;
     	
+    	
       this.clientThreadIdString = clientIdString + "-" + Thread.currentThread().getId();
       this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
       this.clientThreadIdLength = (short) clientThreadIdString.length();
-      
+      LOG.debug("Starting Run Of Sender Thread: " + Thread.currentThread().getId());
     
     	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread()) + ":blockTransmitTime - ms";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
@@ -854,6 +856,7 @@ public class Producer {
           LOG.error("Unexpected error", t);
         }
       }
+    	LOG.debug("Finishing Run Of Sender Thread: " + Thread.currentThread().getId());
     }
 
   }
