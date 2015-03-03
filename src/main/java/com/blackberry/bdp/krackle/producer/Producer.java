@@ -207,7 +207,7 @@ public class Producer {
     	Thread senderThread = new Thread(sender);
     	senderThread.setDaemon(false);
     	LOG.debug("[{}] Creating Sender Thread-{} ({})", topicString, i, senderThread.toString());
-    	senderThread.setName("Sender-Thread-" + i);
+    	senderThread.setName("Sender-Thread-" + i + "-" + senderThread.getId());
     	senderThread.start();
     	senderThreads.add(senderThread);
     	senders.add(sender);
@@ -224,10 +224,10 @@ public class Producer {
       	for(Thread senderThread : senderThreads) {
       		if (senderThread == null || senderThread.isAlive() == false) {
       			toRemove.add(senderThread);
-      			LOG.error("[{}] Sender thread is dead! Restarting it.", topicString);
+      			LOG.error("[{}] Sender thread {} is dead! Restarting it.", topicString, senderThread.getName());
       			senderThread = new Thread(sender);
       			senderThread.setDaemon(false);
-      			senderThread.setName("Sender-Thread");
+      			senderThread.setName("Sender-Thread-" + senderThread.getId());
       			senderThread.start();
       			toAdd.add(senderThread);
       		}
