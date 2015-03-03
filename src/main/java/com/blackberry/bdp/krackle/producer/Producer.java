@@ -551,7 +551,7 @@ public class Producer {
 	 
 	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
-  		LOG.info("Updating metadata");		
+  		LOG.info("{} - Updating metadata", Thread.currentThread().getName());		
   		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString );		
   		LOG.debug("Metadata: {}", metadata);
   		Topic topic = metadata.getTopic(topicString);
