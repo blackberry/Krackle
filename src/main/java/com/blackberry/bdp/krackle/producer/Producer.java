@@ -159,6 +159,8 @@ public class Producer {
     LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
     this.conf = conf;
+	 
+    clientId = clientId + "-" + Long.toHexString(Double.doubleToLongBits(Math.random()));	
 
     this.topicString = topic;
     this.topicBytes = topic.getBytes(UTF8);
@@ -543,9 +545,7 @@ public class Producer {
      
     }
 	 
-	 // Dave made this synchonized to try to prevent sender threads from crashing... *shurgs*
-    
-  	private synchronized void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
+	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
   		LOG.info("Updating metadata");		
   		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString );		
