@@ -542,8 +542,10 @@ public class Producer {
       }
      
     }
+	 
+	 // Dave made this synchonized to try to prevent sender threads from crashing... *shurgs*
     
-  	private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
+  	private synchronized void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
   	{
   		LOG.info("Updating metadata");		
   		metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString );		
