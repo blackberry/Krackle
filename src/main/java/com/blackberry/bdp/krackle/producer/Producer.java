@@ -822,7 +822,7 @@ public class Producer {
       this.clientThreadIdString = clientIdString + "-" + Thread.currentThread().getId();
       this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
       this.clientThreadIdLength = (short) clientThreadIdString.length();
-      LOG.debug("Starting Run Of Sender Thread: " + Thread.currentThread().getId());
+      LOG.debug("Starting Run Of Sender Thread: " + Thread.currentThread().getName()+ "-"+ Thread.currentThread().getId());
     
     	String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread()) + ":blockTransmitTime - ms";
     	MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
