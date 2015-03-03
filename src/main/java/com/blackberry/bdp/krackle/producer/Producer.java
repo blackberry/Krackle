@@ -118,7 +118,7 @@ public class Producer {
 
 
 
-  private Sender sender = null;
+  //private Sender sender = null;
   private ArrayList<Thread> senderThreads = new ArrayList<>();
   private ArrayList<Sender> senders = new ArrayList<>();
 
@@ -207,7 +207,7 @@ public class Producer {
 
  // Create the sender objects and threads
     for (int i = 0; i < conf.getSenderThreads(); i++) {
-    	sender = new Sender();
+    	Sender sender = new Sender();
     	Thread senderThread = new Thread(sender);
     	senderThread.setDaemon(false);
     	LOG.debug("[{}] Creating Sender Thread-{} ({})", topicString, i, senderThread.toString());
@@ -227,6 +227,7 @@ public class Producer {
 
       	for(Thread senderThread : senderThreads) {
       		if (senderThread == null || senderThread.isAlive() == false) {
+				Sender sender = new Sender();
       			toRemove.add(senderThread);
       			LOG.error("[{}] Sender thread {} clientId {}  is dead! Restarting it.", topicString, senderThread.getName(), clientIdString);
       			senderThread = new Thread(sender);
