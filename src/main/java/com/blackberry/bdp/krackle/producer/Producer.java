@@ -190,7 +190,7 @@ public class Producer
 			Thread senderThread = new Thread(sender);
 			senderThread.setDaemon(false);
 			LOG.debug("[{}] Creating Sender Thread-{} ({})", topicString, i, senderThread.toString());
-			senderThread.setName("Sender-Thread-" + i);
+			senderThread.setName("Sender-Thread-" + i + "-" + senderThread.getId());
 			senderThread.start();
 			senderThreads.add(senderThread);
 			senders.add(sender);
