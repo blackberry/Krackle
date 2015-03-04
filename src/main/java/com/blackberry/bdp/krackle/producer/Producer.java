@@ -180,6 +180,8 @@ public class Producer
 			@Override
 			public void run()
 			{
+				LOG.info("[{}] there are {} sender threads and {} sender objects", senderThreads.size(), senders.size());
+				
 				try
 				{
 					send(null, 0, 0);
