@@ -1,13 +1,3 @@
-Changes in Krackle 0.7.10
-
-- Sets the keep alive flag on the consumer's broker socket to true
-
-
-Changes in Krackle 0.7.9
-
-- Adds the option for no rotation, sequential rotation or random rotation through partitions.
-- Changes how the transit time to kafka is calculated - now uses System.currentTimeMillis instead of nano second resolution.
-
 Changes in Krackle 0.7.8
 
 - Fixes partition rotation.  Quick rotate is no longer a supported configuration item.  Instead all topic meta data refreshes will rotate partitions and if quicker rotation is required than topic.metadata.refresh.interval.ms can be configured accordingly.  Regular topic specific overrides are possible as well for topics that require faster rotaiton.

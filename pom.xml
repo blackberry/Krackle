@@ -20,7 +20,7 @@ limitations under the License.
 
 	<groupId>com.blackberry.bdp.krackle</groupId>
 	<artifactId>krackle-dev</artifactId>
-	<version>0.7.10</version>
+	<version>0.7.8</version>
 	<packaging>jar</packaging>
 
 	<name>krackle-dev</name>
