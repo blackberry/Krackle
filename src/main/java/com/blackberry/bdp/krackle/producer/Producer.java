@@ -175,7 +175,8 @@ public class Producer
 				try
 				{
 					send(null, 0, 0);
-				} catch (Exception e)
+				} 
+				catch (Exception e)
 				{
 					// That's fine.
 				}
@@ -884,7 +885,9 @@ public class Producer
 			this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
 			this.clientThreadIdLength = (short) clientThreadIdString.length();
 
-			String metricName = "krackle:producer:" + topicString + ":thread_" + senderThreads.indexOf(Thread.currentThread().getId()) + ":blockTransmitTime - ms";
+			String metricName = "krackle:producer:" + topicString + ":thread_" + Thread.currentThread().getName() + ":blockTransmitTime - ms";
+			
+			LOG.info("Trying to create a metric named: {}", metricName);
 			
 			MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
 				 new Gauge<Integer>()
