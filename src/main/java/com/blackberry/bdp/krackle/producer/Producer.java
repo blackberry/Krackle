@@ -596,9 +596,8 @@ public class Producer
 						partitionModifier = rand.nextInt(topic.getNumPartitions());
 					}
 				}
+				partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
 			}
-
-			partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
 
 			LOG.info("Sending to partition {} of {}", partition, topic.getNumPartitions());
 
