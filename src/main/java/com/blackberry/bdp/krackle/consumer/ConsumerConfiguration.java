@@ -16,6 +16,7 @@
 
 package com.blackberry.bdp.krackle.consumer;
 
+import com.blackberry.bdp.common.logger.InstrumentedLoggerSingleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -102,6 +103,7 @@ public class ConsumerConfiguration
 	
 	public ConsumerConfiguration(Properties props) throws Exception
 	{
+		InstrumentedLoggerSingleton.getInstance();
 		LOG.info("Building configuration.");
 
 		metadataBrokerList = new ArrayList<String>();

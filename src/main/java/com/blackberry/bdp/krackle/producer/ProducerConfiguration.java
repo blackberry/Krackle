@@ -9,6 +9,7 @@
  */
 package com.blackberry.bdp.krackle.producer;
 
+import com.blackberry.bdp.common.logger.InstrumentedLoggerSingleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -201,6 +202,8 @@ public class ProducerConfiguration
 	 */
 	public ProducerConfiguration(Properties props, String topicName) throws Exception
 	{
+		InstrumentedLoggerSingleton.getInstance();
+		
 		this.props = props;
 		this.topicName = topicName;
 		

@@ -30,7 +30,8 @@ import org.slf4j.LoggerFactory;
 
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.KafkaError;
-import com.blackberry.bdp.krackle.MetricRegistrySingleton;
+import com.blackberry.bdp.common.jmx.MetricRegistrySingleton;
+import com.blackberry.bdp.common.logger.InstrumentedLoggerSingleton;
 import com.blackberry.bdp.krackle.compression.Compressor;
 import com.blackberry.bdp.krackle.compression.GzipCompressor;
 import com.blackberry.bdp.krackle.compression.SnappyCompressor;
@@ -134,6 +135,8 @@ public class Producer
 	 */
 	public Producer(ProducerConfiguration conf, String clientId, String topic, String key, MetricRegistry metrics) throws Exception
 	{
+		InstrumentedLoggerSingleton.getInstance();
+		
 		LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
 		this.conf = conf;

@@ -16,6 +16,7 @@
 
 package com.blackberry.bdp.krackle.consumer;
 
+import com.blackberry.bdp.common.logger.InstrumentedLoggerSingleton;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
@@ -70,6 +71,8 @@ public class MessageSetReader
 	
 	public void init(byte[] src, int position, int length)
 	{
+		InstrumentedLoggerSingleton.getInstance();
+		
 		if (bytes.length < length)
 		{
 			bytes = new byte[length];

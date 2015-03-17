@@ -16,6 +16,8 @@
 
 package com.blackberry.bdp.krackle.consumer;
 
+import com.blackberry.bdp.common.jmx.MetricRegistrySingleton;
+import com.blackberry.bdp.common.logger.InstrumentedLoggerSingleton;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.KafkaError;
-import com.blackberry.bdp.krackle.MetricRegistrySingleton;
 import com.blackberry.bdp.krackle.meta.Broker;
 import com.blackberry.bdp.krackle.meta.MetaData;
 import com.codahale.metrics.Meter;
@@ -43,7 +44,7 @@ import java.net.SocketTimeoutException;
  * This class was designed to be very light weight. The standard Java client creates a lot of objects, and therefore causes a lot of garbage collection that leads to a major slowdown in performance. This client creates no new objects during steady state running, and so avoids all garbage collection overhead.
  */
 public class Consumer
-{
+{	
 	private static final Logger LOG = LoggerFactory.getLogger(Consumer.class);
 	private static final Charset UTF8 = Charset.forName("UTF8");
 
@@ -152,6 +153,8 @@ public class Consumer
 	
 	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics) throws BrokerUnavailableException
 	{
+		InstrumentedLoggerSingleton.getInstance();
+		
 		LOG.info("[{}-{}] creating consumer for  from offset {}", topic, partition, offset);
 
 		this.conf = conf;
