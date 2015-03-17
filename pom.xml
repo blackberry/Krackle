@@ -46,7 +46,7 @@ limitations under the License.
 		</dependency>
 		<dependency>
 			<groupId>com.blackberry.bdp.common</groupId>
-			<artifactId>bdp-common</artifactId>
+			<artifactId>bdp-common-dev</artifactId>
 			<version>0.0.6</version>
 		</dependency>
 
