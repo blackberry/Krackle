@@ -17,7 +17,6 @@
 package com.blackberry.bdp.krackle.consumer;
 
 import com.blackberry.bdp.common.jmx.MetricRegistrySingleton;
-import com.blackberry.bdp.common.logger.InstrumentedLoggerSingleton;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -153,8 +152,6 @@ public class Consumer
 	
 	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics) throws BrokerUnavailableException
 	{
-		InstrumentedLoggerSingleton.getInstance();
-		
 		LOG.info("[{}-{}] creating consumer for  from offset {}", topic, partition, offset);
 
 		this.conf = conf;
