@@ -95,9 +95,6 @@ public class Producer
 	// For compressed messages, this shouldn't need to be bigger.
 	private int sendBufferSize;
 
-	// How to compress!
-	Compressor compressor;
-
 	// We could be using crc in 2 separate blocks, which could cause corruption
 	// with one instance.
 	private CRC32 crcSend = new CRC32();
@@ -259,8 +256,6 @@ public class Producer
 		topicMetadataRefreshIntervalMs = conf.getTopicMetadataRefreshIntervalMs();
 		queueBufferingMaxMs = conf.getQueueBufferingMaxMs();
 
-		String compressionCodec = conf.getCompressionCodec();
-		compressionLevel = conf.getCompressionLevel();
 
 		int messageBufferSize = conf.getMessageBufferSize();
 		numBuffers = conf.getNumBuffers();
@@ -333,29 +328,6 @@ public class Producer
 		}
 
 		buffersToSend = new ArrayBlockingQueue<>(numBuffers);
-
-		if (compressionCodec.equals("none"))
-		{
-			compressor = null;
-		} 
-		else
-		{
-			if (compressionCodec.equals("snappy"))
-			{
-				compressor = new SnappyCompressor();
-			} 
-			else
-			{
-				if (compressionCodec.equals("gzip"))
-				{
-					compressor = new GzipCompressor(compressionLevel);
-				} 
-				else
-				{
-					throw new Exception("Unknown compression type: " + compressionCodec);
-				}
-			}
-		}
 
 	}
 
@@ -521,6 +493,9 @@ public class Producer
 		private CRC32 crcSendMessage = new CRC32();
 		private Random rand = new Random();
 
+		// How to compress!
+		Compressor compressor;
+		
 		// Buffer for reading responses from the server.
 		private byte[] responseBytes;
 		private ByteBuffer responseBuffer;
@@ -544,7 +519,7 @@ public class Producer
 		private Broker broker;
 		private String brokerAddress = null;
 
-		public Sender()
+		public Sender() throws Exception
 		{
 
 			toSendBytes = new byte[sendBufferSize];
@@ -553,6 +528,23 @@ public class Producer
 			responseBytes = new byte[4];
 			responseBuffer = ByteBuffer.wrap(responseBytes);
 
+			String compressionCodec = conf.getCompressionCodec();
+			compressionLevel = conf.getCompressionLevel();
+			
+			if (compressionCodec.equals("none")) {
+				compressor = null;
+			} else {
+				if (compressionCodec.equals("snappy")) {
+					compressor = new SnappyCompressor();
+				} else {
+					if (compressionCodec.equals("gzip")) {
+						compressor = new GzipCompressor(compressionLevel);
+					} else{
+						throw new Exception("Unknown compression type: " + compressionCodec);
+					}
+				}
+			}
+			
 			// Try to do this. If it fails, then we can try again when it's time to send.
 			try
 			{
