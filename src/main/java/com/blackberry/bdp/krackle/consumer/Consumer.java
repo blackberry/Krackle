@@ -59,7 +59,7 @@ public class Consumer
 	private Broker broker;
 	private int partition;
 
-	private MessageSetReader messageSetReader = new MessageSetReader();
+	private final MessageSetReader messageSetReader = new MessageSetReader();
 
 	private long offset;
 	private long lastOffset;
@@ -686,6 +686,7 @@ public class Consumer
 				
 				brokerSocket = new Socket( broker.getHost(), broker.getPort());
 				brokerSocket.setSoTimeout(conf.getSocketTimeoutMs());
+				brokerSocket.setKeepAlive(true);
 				brokerSocket.setReceiveBufferSize(conf.getSocketReceiveBufferBytes());
 				brokerIn = brokerSocket.getInputStream();
 				brokerOut = brokerSocket.getOutputStream();
