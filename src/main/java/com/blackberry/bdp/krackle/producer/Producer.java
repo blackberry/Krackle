@@ -76,8 +76,10 @@ public class Producer
 	private short requiredAcks;
 	private int brokerTimeout;
 	private int retries;
-	private int compressionLevel;
 	private int retryBackoffMs;
+	private int retryBackoffExponent;
+	private int compressionLevel;
+	
 	private long topicMetadataRefreshIntervalMs;
 	private long queueBufferingMaxMs;
 
@@ -252,6 +254,7 @@ public class Producer
 		retryBackoffMs = conf.getRetryBackoffMs();
 		brokerTimeout = conf.getRequestTimeoutMs();
 		retries = conf.getMessageSendMaxRetries();
+		retryBackoffExponent = conf.getRetryBackoffExponent();
 		sendBufferSize = conf.getSendBufferSize();
 		topicMetadataRefreshIntervalMs = conf.getTopicMetadataRefreshIntervalMs();
 		queueBufferingMaxMs = conf.getQueueBufferingMaxMs();
@@ -435,6 +438,7 @@ public class Producer
 		crcSend.update(activeMessageSetBuffer.getBytes(), crcPos + 4, length + keyLength + 10);
 
 		activeByteBuffer.putInt(crcPos, (int) crcSend.getValue());
+		
 
 		activeMessageSetBuffer.incrementBatchSize();
 	}
@@ -516,6 +520,7 @@ public class Producer
 		private MetaData metadata;
 		private long lastMetadataRefresh;
 		private int partition;
+		private int partitionPosition;
 		private Broker broker;
 		private String brokerAddress = null;
 
@@ -550,7 +555,7 @@ public class Producer
 			{
 				// In case this fails, we don't want the value to be null;
 				lastMetadataRefresh = System.currentTimeMillis();
-				updateMetaDataAndConnection(true);
+				updateMetaDataAndConnection();
 			} 
 			catch (Throwable t)
 			{
@@ -559,7 +564,7 @@ public class Producer
 			}
 		}
 
-		private void updateMetaDataAndConnection(boolean force) throws MissingPartitionsException
+		private void updateMetaDataAndConnection()throws MissingPartitionsException
 		{
 			LOG.info("Updating metadata");
 			metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);
@@ -571,25 +576,21 @@ public class Producer
 				throw new MissingPartitionsException(String.format("Topic %s has zero partitions", topicString), null);
 			}
 
-			if (!force)
+			if (conf.getPartitionsRotate() == 1)
 			{
-				//We don't rotate if it's a forced meta-data refresh, as we would have a block in the queue waiting to send
-				if (conf.getPartitionsRotate() == 1)
+				//rotate sequentially
+				partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
+				LOG.info("Metadata and connection refresh called without force, partition modifier is now: {}", partitionModifier);
+			} 
+			else
+			{
+				if (conf.getPartitionsRotate() == 2)
 				{
-					//rotate sequentially
-					partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
-					LOG.info("Metadata and connection refresh called without force, partition modifier is now: {}", partitionModifier);
-				} 
-				else
-				{
-					if (conf.getPartitionsRotate() == 2)
-					{
-						//pick a random number to increase partitions by
-						partitionModifier = rand.nextInt(topic.getNumPartitions());
-					}
+					//pick a random number to increase partitions by
+					partitionModifier = rand.nextInt(topic.getNumPartitions());
 				}
-				partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
 			}
+			partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
 
 			LOG.info("Sending to partition {} of {}", partition, topic.getNumPartitions());
 
@@ -598,7 +599,7 @@ public class Producer
 			// Only reset our connection if the broker has changed, or it's forced
 			String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
 
-			if (force || brokerAddress == null || brokerAddress.equals(newBrokerAddress) == false)
+			if (brokerAddress == null || brokerAddress.equals(newBrokerAddress) == false)
 			{
 				brokerAddress = newBrokerAddress;
 				LOG.info("Changing brokers to {}", broker);
@@ -668,7 +669,8 @@ public class Producer
 				toSendBuffer.put(topicBytes);
 				// Number of partitions
 				toSendBuffer.putInt(1);
-				// Partition
+				// Partition: Store the position in case we update meta data and are assigned another partition and need to update it
+				partitionPosition = toSendBuffer.position();
 				toSendBuffer.putInt(partition);
 
 				if (compressor == null)
@@ -706,7 +708,12 @@ public class Producer
 					toSendBuffer.putInt(keyLength);
 					toSendBuffer.put(keyBytes);
 
-					// Compress the value here, into the toSendBuffer
+					/**
+					 * Compress the value here, into the toSendBuffer (4 bytes further than position)
+					 * Then write the compressed size into those 4 bytes 
+					 * Advance position another messageCompressedSize positions
+					 */
+
 					try
 					{
 						messageCompressedSize = compressor.compress(messageSetBuffer.getBytes(), 0, messageSetBuffer.getBuffer().position(), toSendBytes, toSendBuffer.position() + 4);
@@ -731,7 +738,6 @@ public class Producer
 
 					//  Go back and fill in the missing pieces *
 
-					// Message Set Size
 					toSendBuffer.putInt(messageSetSizePos, toSendBuffer.position() - (messageSetSizePos + 4));
 
 					// Message Size
@@ -754,7 +760,8 @@ public class Producer
 					{
 						if (metadata == null || socket == null)
 						{
-							updateMetaDataAndConnection(true);
+							updateMetaDataAndConnection();
+							toSendBuffer.putInt(partition, partitionPosition);
 						}
 
 						LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationId: {} ClientId: {} Socket: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId, clientIdString, socket.toString());
@@ -825,6 +832,8 @@ public class Producer
 							try
 							{
 								Thread.sleep(retryBackoffMs);
+								retryBackoffMs = retryBackoffMs * retryBackoffExponent;
+								LOG.info("Bumping retryBackOffMs to {}", retryBackoffMs);
 							} 
 							catch (InterruptedException e)
 							{
@@ -851,7 +860,7 @@ public class Producer
 				{
 					try
 					{
-						updateMetaDataAndConnection(false);
+						updateMetaDataAndConnection();
 					} 
 					catch (Throwable t)
 					{

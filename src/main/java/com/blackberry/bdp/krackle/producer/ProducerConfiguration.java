@@ -168,6 +168,8 @@ public class ProducerConfiguration
 	private String compressionCodec;
 	private int messageSendMaxRetries;
 	private int retryBackoffMs;
+	private int retryBackoffExponent;
+		
 	private int senderThreads;
 	private int partitionsRotate;
 	private long topicMetadataRefreshIntervalMs;
@@ -212,6 +214,7 @@ public class ProducerConfiguration
 		requestTimeoutMs = parseRequestTimeoutMs("request.timeout.ms", "10000");
 		messageSendMaxRetries = parseMessageSendMaxRetries("message.send.max.retries", "3");
 		retryBackoffMs = parseRetryBackoffMs("retry.backoff.ms", "100");
+		retryBackoffExponent = parseRetryBackoffMs("retry.backoff.exponent", "1");		
 		topicMetadataRefreshIntervalMs = parseTopicMetadataRefreshIntervalMs("topic.metadata.refresh.interval.ms", "" + (60 * 10 * 1000));
 		partitionsRotate = parsePartitionsRotate("partitions.rotate", "random");
 		sendBufferSize = parseSendBufferSize("send.buffer.size", "" + (int) (1.5 * 1024 * 1024));	
@@ -807,6 +810,14 @@ public class ProducerConfiguration
 	public void setTopicName(String topicName)
 	{
 		this.topicName = topicName;
+	}
+
+	/**
+	 * @return the retryBackoffExponent
+	 */
+	public int getRetryBackoffExponent()
+	{
+		return retryBackoffExponent;
 	}
 
 }
