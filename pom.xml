@@ -19,9 +19,8 @@ limitations under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.blackberry.bdp.krackle</groupId>
-
 	<artifactId>krackle</artifactId>
-	<version>0.7.10</version>
+	<version>0.8.0</version>
 	<packaging>jar</packaging>
 
 	<name>krackle</name>
@@ -32,41 +31,23 @@ limitations under the License.
 	</properties>
 
 	<scm>
-		<connection>scm:git:git@gitlab.rim.net:ipgbd-software/krackle.git</connection>
-		<developerConnection>scm:git:git@gitlab.rim.net:ipgbd-software/krackle.git</developerConnection>
-		<url>https://gitlab.rim.net/ipgbd-software/krackle</url>
+		<connection>scm:git:https://github.com/blackberry/Krackle.git</connection>
+		<developerConnection>scm:git:https://github.com/blackberry/Krackle.git</developerConnection>
+		<url>https://github.com/blackberry/Krackle</url>
 	</scm>
 
-
 	<dependencies>
+		
 		<dependency>
 			<groupId>org.xerial.snappy</groupId>
 			<artifactId>snappy-java</artifactId>
-			<version>1.1.0</version>
+			<version>1.1.1.6</version>
 		</dependency>
-
-		<!-- Logging dependencies -->
+		
 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.7.5</version>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-log4j12</artifactId>
-			<version>1.7.5</version>
-		</dependency>
-		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>1.2.17</version>
-		</dependency>
-
-		<!-- Monitoring dependencies -->
-		<dependency>
-			<groupId>com.codahale.metrics</groupId>
-			<artifactId>metrics-core</artifactId>
-			<version>3.0.1</version>
+			<groupId>com.blackberry.bdp.common</groupId>
+			<artifactId>bdp-common-dev</artifactId>
+			<version>0.0.6</version>
 		</dependency>
 
 		<!-- Testing dependencies -->
@@ -82,9 +63,21 @@ limitations under the License.
 			<version>0.8.1.1</version>
 			<scope>test</scope>
 			<exclusions>
-				<exclusion>
-					<artifactId>slf4j-simple</artifactId>
+				<exclusion>					
 					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-simple</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>javax.jms</groupId>
+					<artifactId>jms</artifactId>					
+				</exclusion>
+				<exclusion>
+					<groupId>com.sun.jmx</groupId>
+					<artifactId>jmxri</artifactId>					
+				</exclusion>
+				<exclusion>
+					<groupId>com.sun.jdmk</groupId>
+					<artifactId>jmxtools</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
@@ -119,6 +112,22 @@ limitations under the License.
 						<goals>
 							<goal>jar</goal>
 						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<!-- Copy the dependencies -->
+			<plugin>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/lib</outputDirectory>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

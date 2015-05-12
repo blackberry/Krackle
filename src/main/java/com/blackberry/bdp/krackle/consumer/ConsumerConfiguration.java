@@ -101,7 +101,7 @@ public class ConsumerConfiguration
 	 */
 	
 	public ConsumerConfiguration(Properties props) throws Exception
-	{
+	{		
 		LOG.info("Building configuration.");
 
 		metadataBrokerList = new ArrayList<String>();
