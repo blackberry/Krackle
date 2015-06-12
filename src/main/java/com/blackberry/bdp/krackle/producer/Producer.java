@@ -671,7 +671,7 @@ public class Producer {
 					try {
 						if (metadata == null || socket == null) {
 							updateMetaDataAndConnection();
-							toSendBuffer.putInt(partition, partitionPosition);
+							toSendBuffer.putInt(partitionPosition, partition);
 						}
 
 						LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationId: {} ClientId: {} Socket: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId, clientIdString, socket.toString());

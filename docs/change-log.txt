@@ -1,3 +1,8 @@
+Changes in Krackle 0.8.1:
+
+- Bumps dependency version of snappy to 1.1.1.7
+- Fixes bug (transposed parameters) that would cause a corrupt message sent to Kafka after a partition rotation
+
 Changes in Krackle 0.8.0:
 
 - Supports bdp-common 0.0.6 which provides all logging and monitoring deps
