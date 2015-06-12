@@ -52,8 +52,8 @@ import com.codahale.metrics.MetricRegistry;
  *
  * This class was designed to be very light weight. The standard Java client creates a lot of objects, and therefore causes a lot of garbage collection that leads to a major slowdown in performance. This client creates ver few new objects during steady state running, and so avoids most garbage collection overhead.
  */
-public class Producer
-{
+public class Producer {
+
 	private static final Logger LOG = LoggerFactory.getLogger(Producer.class);
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 
@@ -79,7 +79,7 @@ public class Producer
 	private int retryBackoffMs;
 	private int retryBackoffExponent;
 	private int compressionLevel;
-	
+
 	private long topicMetadataRefreshIntervalMs;
 	private long queueBufferingMaxMs;
 
@@ -131,8 +131,7 @@ public class Producer
 	 * @param metrics MetricRegistry instance to use for metrics.
 	 * @throws Exception
 	 */
-	public Producer(ProducerConfiguration conf, String clientId, String topic, String key, MetricRegistry metrics) throws Exception
-	{
+	public Producer(ProducerConfiguration conf, String clientId, String topic, String key, MetricRegistry metrics) throws Exception {
 		LOG.info("Creating new producer for topic {}, key {}", topic, key);
 
 		this.conf = conf;
@@ -151,40 +150,32 @@ public class Producer
 
 		this.partitionModifier = 0;
 
-		if (metrics == null)
-		{
+		if (metrics == null) {
 			this.metrics = MetricRegistrySingleton.getInstance().getMetricsRegistry();
 			MetricRegistrySingleton.getInstance().enableJmx();
 			MetricRegistrySingleton.getInstance().enableConsole();
-		} 
-		else
-		{
+		} else {
 			this.metrics = metrics;
 		}
-		
+
 		initializeMetrics();
 		configure();
 
 		// Start a periodic sender to ensure that things get sent from time to time.
-		scheduledExecutor.scheduleWithFixedDelay(new Runnable()
-		{
+		scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
 			@Override
-			public void run()
-			{
-				try
-				{
+			public void run() {
+				try {
 					send(null, 0, 0);
-				} 
-				catch (Exception e)
-				{
+				} catch (Exception e) {
 					// That's fine.
 				}
 			}
+
 		}, queueBufferingMaxMs, queueBufferingMaxMs, TimeUnit.MILLISECONDS);
 
 		// Create the sender objects and threads
-		for (int i = 0; i < conf.getSenderThreads(); i++)
-		{
+		for (int i = 0; i < conf.getSenderThreads(); i++) {
 			sender = new Sender();
 			Thread senderThread = new Thread(sender);
 			senderThread.setDaemon(false);
@@ -196,19 +187,15 @@ public class Producer
 		}
 
 		// Ensure that if the sender thread ever dies, it is restarted.
-		scheduledExecutor.scheduleWithFixedDelay(new Runnable()
-		{
+		scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
 			@Override
-			public void run()
-			{
+			public void run() {
 
 				ArrayList<Thread> toRemove = new ArrayList<>();
 				ArrayList<Thread> toAdd = new ArrayList<>();
 
-				for (Thread senderThread : senderThreads)
-				{
-					if (senderThread == null || senderThread.isAlive() == false)
-					{
+				for (Thread senderThread : senderThreads) {
+					if (senderThread == null || senderThread.isAlive() == false) {
 						toRemove.add(senderThread);
 						LOG.error("[{}] Sender thread is dead! Restarting it.", topicString);
 						senderThread = new Thread(sender);
@@ -219,20 +206,18 @@ public class Producer
 					}
 				}
 
-				for (Thread removeThread : toRemove)
-				{
+				for (Thread removeThread : toRemove) {
 					senderThreads.remove(removeThread);
 				}
-				for (Thread addThread : toAdd)
-				{
+				for (Thread addThread : toAdd) {
 					senderThreads.add(addThread);
 				}
 			}
+
 		}, 1, 1, TimeUnit.MINUTES);
 	}
 
-	private void initializeMetrics()
-	{
+	private void initializeMetrics() {
 		String name = topicString;
 
 		mReceived = this.metrics.meter("krackle:producer:topics:" + name + ":messages received");
@@ -248,8 +233,7 @@ public class Producer
 		mDroppedSendFailTotal = this.metrics.meter("krackle:producer:total:messages dropped (send failure)");
 	}
 
-	private void configure() throws Exception
-	{
+	private void configure() throws Exception {
 		requiredAcks = conf.getRequestRequiredAcks();
 		retryBackoffMs = conf.getRetryBackoffMs();
 		brokerTimeout = conf.getRequestTimeoutMs();
@@ -259,21 +243,16 @@ public class Producer
 		topicMetadataRefreshIntervalMs = conf.getTopicMetadataRefreshIntervalMs();
 		queueBufferingMaxMs = conf.getQueueBufferingMaxMs();
 
-
 		int messageBufferSize = conf.getMessageBufferSize();
 		numBuffers = conf.getNumBuffers();
 
 		// Check to see if we're using a shared buffer, or dedicated buffers.
-		if (conf.isUseSharedBuffers())
-		{
-			synchronized (sharedBufferLock)
-			{
-				if (sharedBuffers == null)
-				{
+		if (conf.isUseSharedBuffers()) {
+			synchronized (sharedBufferLock) {
+				if (sharedBuffers == null) {
 					sharedBuffers = new ArrayBlockingQueue<>(numBuffers);
-					
-					for (int i = 0; i < numBuffers; i++)
-					{
+
+					for (int i = 0; i < numBuffers; i++) {
 						sharedBuffers.add(new MessageSetBuffer(this, messageBufferSize));
 					}
 
@@ -281,51 +260,42 @@ public class Producer
 						 .getInstance()
 						 .getMetricsRegistry()
 						 .register("krackle:producer:shared free buffers",
-							  new Gauge<Integer>()
-							  {
+							  new Gauge<Integer>() {
 								  @Override
-								  public Integer getValue()
-								  {
+								  public Integer getValue() {
 									  return sharedBuffers.size();
 								  }
+
 							  });
 				}
 			}
 			freeBuffers = sharedBuffers;
-		} 
-		else
-		{
+		} else {
 			freeBuffers = new ArrayBlockingQueue<>(numBuffers);
-			
-			for (int i = 0; i < numBuffers; i++)
-			{
+
+			for (int i = 0; i < numBuffers; i++) {
 				freeBuffers.add(new MessageSetBuffer(this, messageBufferSize));
 			}
 
 			freeBufferGaugeName = "krackle:producer:topics:" + topicString + ":free buffers";
-			
+
 			if (MetricRegistrySingleton.getInstance().getMetricsRegistry()
-				 .getGauges(new MetricFilter()
-					  {
-						  @Override
-						  public boolean matches(String s, Metric m)
-						  {
-							  return s.equals(freeBufferGaugeName);
-						  }
-				 }).size() > 0)
-			{
+				 .getGauges(new MetricFilter() {
+					 @Override
+					 public boolean matches(String s, Metric m) {
+						 return s.equals(freeBufferGaugeName);
+					 }
+
+				 }).size() > 0) {
 				LOG.warn("Gauge already exists for '{}'", freeBufferGaugeName);
-			} 
-			else
-			{
+			} else {
 				MetricRegistrySingleton.getInstance().getMetricsRegistry()
-					 .register(freeBufferGaugeName, new Gauge<Integer>()
-						  {
-							  @Override
-							  public Integer getValue()
-							  {
-								  return freeBuffers.size();
-							  }
+					 .register(freeBufferGaugeName, new Gauge<Integer>() {
+						 @Override
+						 public Integer getValue() {
+							 return freeBuffers.size();
+						 }
+
 					 });
 			}
 		}
@@ -350,27 +320,20 @@ public class Producer
 	 * @throws Exception
 	 */
 	public synchronized void send(byte[] buffer, int offset, int length)
-		 throws Exception
-	{
-		if (closed)
-		{
+		 throws Exception {
+		if (closed) {
 			LOG.warn("Trying to send data on a closed producer.");
 			return;
 		}
 
-		if (activeMessageSetBuffer == null)
-		{
-			if (conf.getQueueEnqueueTimeoutMs() == -1)
-			{
+		if (activeMessageSetBuffer == null) {
+			if (conf.getQueueEnqueueTimeoutMs() == -1) {
 				activeMessageSetBuffer = freeBuffers.take();
-			} 
-			else
-			{
+			} else {
 				activeMessageSetBuffer = freeBuffers.poll(conf.getQueueEnqueueTimeoutMs(), TimeUnit.MILLISECONDS);
 			}
 
-			if (activeMessageSetBuffer == null)
-			{
+			if (activeMessageSetBuffer == null) {
 				mDroppedQueueFull.mark();
 				mDroppedQueueFullTotal.mark();
 				return;
@@ -378,10 +341,8 @@ public class Producer
 		}
 
 		// null buffer means send what we have
-		if (buffer == null)
-		{
-			if (activeMessageSetBuffer.getBatchSize() > 0)
-			{
+		if (buffer == null) {
+			if (activeMessageSetBuffer.getBatchSize() > 0) {
 				buffersToSend.put(activeMessageSetBuffer);
 				activeMessageSetBuffer = null;
 			}
@@ -391,22 +352,17 @@ public class Producer
 		mReceived.mark();
 		mReceivedTotal.mark();
 
-		if (activeMessageSetBuffer.getBuffer().remaining() < length + keyLength + 26)
-		{
+		if (activeMessageSetBuffer.getBuffer().remaining() < length + keyLength + 26) {
 			buffersToSend.put(activeMessageSetBuffer);
 			activeMessageSetBuffer = null;
 
-			if (conf.getQueueEnqueueTimeoutMs() == -1)
-			{
+			if (conf.getQueueEnqueueTimeoutMs() == -1) {
 				activeMessageSetBuffer = freeBuffers.take();
-			}
-			else
-			{
+			} else {
 				activeMessageSetBuffer = freeBuffers.poll(conf.getQueueEnqueueTimeoutMs(), TimeUnit.MILLISECONDS);
 			}
 
-			if (activeMessageSetBuffer == null)
-			{
+			if (activeMessageSetBuffer == null) {
 				mDroppedQueueFull.mark();
 				mDroppedQueueFullTotal.mark();
 				return;
@@ -438,7 +394,6 @@ public class Producer
 		crcSend.update(activeMessageSetBuffer.getBytes(), crcPos + 4, length + keyLength + 10);
 
 		activeByteBuffer.putInt(crcPos, (int) crcSend.getValue());
-		
 
 		activeMessageSetBuffer.incrementBatchSize();
 	}
@@ -446,46 +401,37 @@ public class Producer
 	int nextLoadingBuffer;
 	boolean incrementLoadingBufferResult;
 
-	private String getErrorString(short errorCode)
-	{
-		for (KafkaError e : KafkaError.values())
-		{
-			if (e.getCode() == errorCode)
-			{
+	private String getErrorString(short errorCode) {
+		for (KafkaError e : KafkaError.values()) {
+			if (e.getCode() == errorCode) {
 				return e.getMessage();
 			}
 		}
 		return null;
 	}
 
-	public synchronized void close()
-	{
+	public synchronized void close() {
 		LOG.info("Closing producer.");
 		closed = true;
 
 		buffersToSend.add(activeMessageSetBuffer);
 		activeMessageSetBuffer = null;
 
-		try
-		{
-			for (Thread senderThread : senderThreads)
-			{
+		try {
+			for (Thread senderThread : senderThreads) {
 				senderThread.join();
 			}
-		} 
-		catch (InterruptedException e)
-		{
+		} catch (InterruptedException e) {
 			LOG.error("Error shutting down sender and loader threads.", e);
 		}
 
-		if (conf.isUseSharedBuffers() == false)
-		{
+		if (conf.isUseSharedBuffers() == false) {
 			MetricRegistrySingleton.getInstance().getMetricsRegistry().remove(freeBufferGaugeName);
 		}
 	}
 
-	private class Sender implements Runnable
-	{
+	private class Sender implements Runnable {
+
 		private MessageSetBuffer buffer;
 		private int lastLatency = 0;
 		private int correlationId = 0;
@@ -499,7 +445,7 @@ public class Producer
 
 		// How to compress!
 		Compressor compressor;
-		
+
 		// Buffer for reading responses from the server.
 		private byte[] responseBytes;
 		private ByteBuffer responseBuffer;
@@ -524,8 +470,7 @@ public class Producer
 		private Broker broker;
 		private String brokerAddress = null;
 
-		public Sender() throws Exception
-		{
+		public Sender() throws Exception {
 
 			toSendBytes = new byte[sendBufferSize];
 			toSendBuffer = ByteBuffer.wrap(toSendBytes);
@@ -535,7 +480,7 @@ public class Producer
 
 			String compressionCodec = conf.getCompressionCodec();
 			compressionLevel = conf.getCompressionLevel();
-			
+
 			if (compressionCodec.equals("none")) {
 				compressor = null;
 			} else {
@@ -544,48 +489,39 @@ public class Producer
 				} else {
 					if (compressionCodec.equals("gzip")) {
 						compressor = new GzipCompressor(compressionLevel);
-					} else{
+					} else {
 						throw new Exception("Unknown compression type: " + compressionCodec);
 					}
 				}
 			}
-			
+
 			// Try to do this. If it fails, then we can try again when it's time to send.
-			try
-			{
+			try {
 				// In case this fails, we don't want the value to be null;
 				lastMetadataRefresh = System.currentTimeMillis();
 				updateMetaDataAndConnection();
-			} 
-			catch (Throwable t)
-			{
+			} catch (Throwable t) {
 				LOG.warn("Initial load of metadata failed.", t);
 				metadata = null;
 			}
 		}
 
-		private void updateMetaDataAndConnection()throws MissingPartitionsException
-		{
+		private void updateMetaDataAndConnection() throws MissingPartitionsException {
 			LOG.info("Updating metadata");
 			metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);
 			LOG.debug("Metadata: {}", metadata);
 			Topic topic = metadata.getTopic(topicString);
 
-			if (topic.getNumPartitions() == 0)
-			{
+			if (topic.getNumPartitions() == 0) {
 				throw new MissingPartitionsException(String.format("Topic %s has zero partitions", topicString), null);
 			}
 
-			if (conf.getPartitionsRotate() == 1)
-			{
+			if (conf.getPartitionsRotate() == 1) {
 				//rotate sequentially
 				partitionModifier = (partitionModifier + 1) % topic.getNumPartitions();
 				LOG.info("Metadata and connection refresh called without force, partition modifier is now: {}", partitionModifier);
-			} 
-			else
-			{
-				if (conf.getPartitionsRotate() == 2)
-				{
+			} else {
+				if (conf.getPartitionsRotate() == 2) {
 					//pick a random number to increase partitions by
 					partitionModifier = rand.nextInt(topic.getNumPartitions());
 				}
@@ -599,38 +535,28 @@ public class Producer
 			// Only reset our connection if the broker has changed, or it's forced
 			String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
 
-			if (brokerAddress == null || brokerAddress.equals(newBrokerAddress) == false)
-			{
+			if (brokerAddress == null || brokerAddress.equals(newBrokerAddress) == false) {
 				brokerAddress = newBrokerAddress;
 				LOG.info("Changing brokers to {}", broker);
 
-				if (socket != null)
-				{
-					try
-					{
+				if (socket != null) {
+					try {
 						socket.close();
-					} 
-					catch (IOException e)
-					{
+					} catch (IOException e) {
 						LOG.error("Error closing connection to broker.", e);
 					}
 				}
 
-				try
-				{
+				try {
 					socket = new Socket(broker.getHost(), broker.getPort());
 					socket.setSendBufferSize(conf.getSendBufferSize());
 					socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
 					LOG.info("Connected to {}", socket);
 					in = socket.getInputStream();
 					out = socket.getOutputStream();
-				} 
-				catch (UnknownHostException e)
-				{
+				} catch (UnknownHostException e) {
 					LOG.error("Error connecting to broker.", e);
-				} 
-				catch (IOException e)
-				{
+				} catch (IOException e) {
 					LOG.error("Error connecting to broker.", e);
 				}
 			}
@@ -639,10 +565,8 @@ public class Producer
 		}
 
 		// Send accumulated messages
-		protected void sendMessage(MessageSetBuffer messageSetBuffer)
-		{
-			try
-			{
+		protected void sendMessage(MessageSetBuffer messageSetBuffer) {
+			try {
 				// New message, new id
 				correlationId++;
 
@@ -673,8 +597,7 @@ public class Producer
 				partitionPosition = toSendBuffer.position();
 				toSendBuffer.putInt(partition);
 
-				if (compressor == null)
-				{
+				if (compressor == null) {
 					// If we 're not compressing, then we can just dump the rest of the
 					// message here.
 
@@ -684,9 +607,7 @@ public class Producer
 					// Message set
 					toSendBuffer.put(messageSetBuffer.getBytes(), 0, messageSetBuffer.getBuffer().position());
 
-				} 
-				else
-				{
+				} else {
 					// If we are compressing, then do that.
 
 					// Message set size ? We'll have to do this later.
@@ -709,23 +630,16 @@ public class Producer
 					toSendBuffer.put(keyBytes);
 
 					/**
-					 * Compress the value here, into the toSendBuffer (4 bytes further than position)
-					 * Then write the compressed size into those 4 bytes 
-					 * Advance position another messageCompressedSize positions
+					 * Compress the value here, into the toSendBuffer (4 bytes further than position) Then write the compressed size into those 4 bytes Advance position another messageCompressedSize positions
 					 */
-
-					try
-					{
+					try {
 						messageCompressedSize = compressor.compress(messageSetBuffer.getBytes(), 0, messageSetBuffer.getBuffer().position(), toSendBytes, toSendBuffer.position() + 4);
 
-						if (messageCompressedSize == -1)
-						{
+						if (messageCompressedSize == -1) {
 							// toSendBytes is too small to hold the compressed data
 							throw new IOException("Not enough room in the send buffer for the compressed data.");
 						}
-					} 
-					catch (IOException e)
-					{
+					} catch (IOException e) {
 						LOG.error("Exception while compressing data.  (data lost).", e);
 						return;
 					}
@@ -737,7 +651,6 @@ public class Producer
 					toSendBuffer.position(toSendBuffer.position() + messageCompressedSize);
 
 					//  Go back and fill in the missing pieces *
-
 					toSendBuffer.putInt(messageSetSizePos, toSendBuffer.position() - (messageSetSizePos + 4));
 
 					// Message Size
@@ -754,12 +667,9 @@ public class Producer
 
 				// Send it!
 				retry = 0;
-				while (retry <= retries)
-				{
-					try
-					{
-						if (metadata == null || socket == null)
-						{
+				while (retry <= retries) {
+					try {
+						if (metadata == null || socket == null) {
 							updateMetaDataAndConnection();
 							toSendBuffer.putInt(partition, partitionPosition);
 						}
@@ -768,19 +678,17 @@ public class Producer
 						// Send request
 						out.write(toSendBytes, 0, toSendBuffer.position());
 
-						if (requiredAcks != 0)
-						{
+						if (requiredAcks != 0) {
 							// Check response
 							responseBuffer.clear();
 							in.read(responseBytes, 0, 4);
 							responseSize = responseBuffer.getInt();
-							
-							if (responseBuffer.capacity() < responseSize)
-							{
+
+							if (responseBuffer.capacity() < responseSize) {
 								responseBytes = new byte[responseSize];
 								responseBuffer = ByteBuffer.wrap(responseBytes);
 							}
-							
+
 							responseBuffer.clear();
 							in.read(responseBytes, 0, responseSize);
 
@@ -796,52 +704,40 @@ public class Producer
 							// The only things we care about here are the correlation id (must
 							// match) and the error code (so we can throw an exception if it's
 							// not 0)
-							
 							responseCorrelationId = responseBuffer.getInt();
-							
-							if (responseCorrelationId != correlationId)
-							{
+
+							if (responseCorrelationId != correlationId) {
 								throw new Exception("Correlation ID mismatch.  Expected " + correlationId + ", got " + responseCorrelationId + " ClientID: " + clientIdString + " Socket: " + socket.toString());
 							}
-							
+
 							responseErrorCode = responseBuffer.getShort(18 + topicLength);
-							
-							if (responseErrorCode != KafkaError.NoError.getCode())
-							{
+
+							if (responseErrorCode != KafkaError.NoError.getCode()) {
 								throw new Exception("Got error from broker. Error Code " + responseErrorCode + " (" + getErrorString(responseErrorCode) + ")");
 							}
-							
+
 							// Clear the responses, if there is anything else to read
-							while (in.available() > 0)
-							{
+							while (in.available() > 0) {
 								in.read(responseBytes, 0, responseBytes.length);
 							}
 						}
 
 						break;
-					} 
-					catch (Throwable t)
-					{
+					} catch (Throwable t) {
 						metadata = null;
 
 						retry++;
-						
-						if (retry <= retries)
-						{
+
+						if (retry <= retries) {
 							LOG.warn("Request failed. Retrying {} more times for {}.", retries - retry + 1, topicString, t);
-							try
-							{
+							try {
 								Thread.sleep(retryBackoffMs);
 								retryBackoffMs = retryBackoffMs * retryBackoffExponent;
 								LOG.info("Bumping retryBackOffMs to {}", retryBackoffMs);
-							} 
-							catch (InterruptedException e)
-							{
+							} catch (InterruptedException e) {
 								// Do nothing
 							}
-						} 
-						else
-						{
+						} else {
 							LOG.error("Request failed. No more retries (data lost) for {}.", topicString, t);
 							mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
 							mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
@@ -856,20 +752,14 @@ public class Producer
 
 				// Periodic metadata refreshes.
 				if ((topicMetadataRefreshIntervalMs >= 0
-					 && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs))
-				{
-					try
-					{
+					 && System.currentTimeMillis() - lastMetadataRefresh >= topicMetadataRefreshIntervalMs)) {
+					try {
 						updateMetaDataAndConnection();
-					} 
-					catch (Throwable t)
-					{
+					} catch (Throwable t) {
 						LOG.error("Error refreshing metadata.", t);
 					}
 				}
-			} 
-			catch (Throwable t)
-			{
+			} catch (Throwable t) {
 				LOG.error("Unexpected exception: {}", t);
 				mDroppedSendFail.mark(messageSetBuffer.getBatchSize());
 				mDroppedSendFailTotal.mark(messageSetBuffer.getBatchSize());
@@ -877,8 +767,7 @@ public class Producer
 		}
 
 		@Override
-		public void run()
-		{
+		public void run() {
 			float sendStart = 0;
 
 			this.clientThreadIdString = clientIdString + "-" + Thread.currentThread().getId();
@@ -886,40 +775,32 @@ public class Producer
 			this.clientThreadIdLength = (short) clientThreadIdString.length();
 
 			String metricName = "krackle:producer:" + topicString + ":thread_" + Thread.currentThread().getName() + ":blockTransmitTime - ms";
-			
+
 			LOG.info("Trying to create a metric named: {}", metricName);
-			
+
 			MetricRegistrySingleton.getInstance().getMetricsRegistry().register(metricName,
-				 new Gauge<Integer>()
-				 {
+				 new Gauge<Integer>() {
 					 @Override
-					 public Integer getValue()
-					 {
+					 public Integer getValue() {
 						 return lastLatency;
 					 }
+
 				 });
 
-			while (true)
-			{
-				try
-				{
-					if (closed && buffersToSend.isEmpty())
-					{
+			while (true) {
+				try {
+					if (closed && buffersToSend.isEmpty()) {
 						break;
 					}
 
-					try
-					{
+					try {
 						buffer = buffersToSend.poll(1, TimeUnit.SECONDS);
-					}
-					catch (InterruptedException e)
-					{
+					} catch (InterruptedException e) {
 						LOG.error("Interrupted polling for a new buffer.", e);
 						continue;
 					}
-					
-					if (buffer == null)
-					{
+
+					if (buffer == null) {
 						continue;
 					}
 
@@ -929,12 +810,12 @@ public class Producer
 					buffer.clear();
 					freeBuffers.add(buffer);
 					lastLatency = (int) (System.currentTimeMillis() - sendStart);
-				} 
-				catch (Throwable t)
-				{
+				} catch (Throwable t) {
 					LOG.error("Unexpected error", t);
 				}
 			}
 		}
+
 	}
+
 }
