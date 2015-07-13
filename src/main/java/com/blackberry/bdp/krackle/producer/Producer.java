@@ -725,8 +725,9 @@ public class Producer {
 						break;
 					} catch (Throwable t) {
 						metadata = null;
-						
+												
 						//IPGBD-3859 - mbruce - Close the socket and null out the object, so that we can re-establish the socket and connection when we update the metadata
+						brokerAddress = null;
 						if (socket != null)	{
 							try	{
 								socket.close();
