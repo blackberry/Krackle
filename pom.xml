@@ -19,11 +19,11 @@ limitations under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.blackberry.bdp.krackle</groupId>
-	<artifactId>krackle-dev</artifactId>
+	<artifactId>krackle</artifactId>
 	<version>0.8.1.2</version>
 	<packaging>jar</packaging>
 
-	<name>krackle-dev</name>
+	<name>krackle</name>
 	<url>http://blackberry.com</url>
 
 	<properties>
