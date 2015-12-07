@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.consumer;
 
 import java.io.IOException;
@@ -28,8 +27,8 @@ import com.blackberry.bdp.krackle.compression.Decompressor;
 import com.blackberry.bdp.krackle.compression.GzipDecompressor;
 import com.blackberry.bdp.krackle.compression.SnappyDecompressor;
 
-public class MessageSetReader
-{
+public class MessageSetReader {
+
 	private static final Logger LOG = LoggerFactory.getLogger(MessageSetReader.class);
 
 	private boolean ready = false;
@@ -57,7 +56,7 @@ public class MessageSetReader
 	private int valueLength;
 	private int bytesCopied;
 	private int decompressedSize;
-	
+
 	/**
 	 * Initialize with a message set.
 	 *
@@ -67,11 +66,8 @@ public class MessageSetReader
 	 * @param position position in the source where the message set starts.
 	 * @param length length of the message set.
 	 */
-	
-	public void init(byte[] src, int position, int length)
-	{
-		if (bytes.length < length)
-		{
+	public void init(byte[] src, int position, int length) {
+		if (bytes.length < length) {
 			bytes = new byte[length];
 			buffer = ByteBuffer.wrap(bytes);
 		}
@@ -80,12 +76,9 @@ public class MessageSetReader
 		buffer.clear();
 		buffer.limit(length);
 
-		if (length > 0)
-		{
+		if (length > 0) {
 			ready = true;
-		} 
-		else
-		{
+		} else {
 			ready = false;
 		}
 	}
@@ -101,30 +94,21 @@ public class MessageSetReader
 	 * @return the number of bytes writen, or <code>-1</code> if no data was returned.
 	 * @throws IOException
 	 */
-	
-	public int getMessage(byte[] dest, int pos, int maxLength) throws IOException
-	{
-		if (messageSetReader != null && messageSetReader.isReady())
-		{
+	public int getMessage(byte[] dest, int pos, int maxLength) throws IOException {
+		if (messageSetReader != null && messageSetReader.isReady()) {
 			bytesCopied = messageSetReader.getMessage(dest, pos, maxLength);
 			offset = messageSetReader.getOffset();
-			
-			if (!messageSetReader.isReady() && !buffer.hasRemaining())
-			{
+
+			if (!messageSetReader.isReady() && !buffer.hasRemaining()) {
 				ready = false;
-			} 
-			else
-			{
+			} else {
 				ready = true;
 			}
-		} 
-		else
-		{
+		} else {
 			// There are occasional truncated messages. If we don't have enough,
 			// then return -1 and go not-ready
 			// This will cover the offset, message size and crc
-			if (buffer.remaining() < 8 + 4)
-			{
+			if (buffer.remaining() < 8 + 4) {
 				ready = false;
 				return -1;
 			}
@@ -134,23 +118,21 @@ public class MessageSetReader
 
 			// messageSize
 			messageSize = buffer.getInt();
-			
+
 			// This should be the last size check we need to do.
-			if (buffer.remaining() < messageSize)
-			{
+			if (buffer.remaining() < messageSize) {
 				ready = false;
 				return -1;
 			}
 
 			// Crc => int32
 			crc = buffer.getInt();
-			
+
 			// check that the crc is correct
 			crc32.reset();
 			crc32.update(bytes, buffer.position(), messageSize - 4);
-			
-			if (crc != (int) crc32.getValue())
-			{
+
+			if (crc != (int) crc32.getValue()) {
 				LOG.error("CRC value mismatch.");
 				ready = false;
 				return -1;
@@ -158,9 +140,8 @@ public class MessageSetReader
 
 			// MagicByte => int8
 			magicByte = buffer.get();
-			
-			if (magicByte != Constants.MAGIC_BYTE)
-			{
+
+			if (magicByte != Constants.MAGIC_BYTE) {
 				LOG.error("Incorrect magic byte.");
 				ready = false;
 				return -1;
@@ -172,63 +153,48 @@ public class MessageSetReader
 
 			// Key => bytes
 			keyLength = buffer.getInt();
-			
-			if (keyLength == -1)
-			{
+
+			if (keyLength == -1) {
 				// null key
-			} 
-			else
-			{
+			} else {
 				// ignore the key
 				buffer.position(buffer.position() + keyLength);
 			}
 
 			// Value => bytes
 			valueLength = buffer.getInt();
-			
-			if (valueLength == -1)
-			{
+
+			if (valueLength == -1) {
 				// null value. return -1, but we may still be ready.
-				if (!buffer.hasRemaining())
-				{
+				if (!buffer.hasRemaining()) {
 					ready = false;
 				}
 				return -1;
 			}
 
-			if (compression == Constants.NO_COMPRESSION)
-			{
+			if (compression == Constants.NO_COMPRESSION) {
 				bytesCopied = Math.min(maxLength, valueLength);
-				if (bytesCopied < valueLength)
-				{
+				if (bytesCopied < valueLength) {
 					LOG.warn("Truncating message from {} to {} bytes.", valueLength, maxLength);
 				}
 				System.arraycopy(bytes, buffer.position(), dest, pos, bytesCopied);
-			} 
-			else
-			{
-				if (compression == Constants.SNAPPY)
-				{
+			} else {
+				if (compression == Constants.SNAPPY) {
 					decompressedSize = decompress(getSnappyDecompressor());
 					ensureMessageSetReader();
 					messageSetReader.init(decompressionBytes, 0, decompressedSize);
-					
-					if (messageSetReader.isReady())
-					{
+
+					if (messageSetReader.isReady()) {
 						bytesCopied = messageSetReader.getMessage(dest, pos, maxLength);
 						offset = messageSetReader.getOffset();
 					}
-				} 
-				else
-				{
-					if (compression == Constants.GZIP)
-					{
+				} else {
+					if (compression == Constants.GZIP) {
 						decompressedSize = decompress(getGzipDecompressor());
 						ensureMessageSetReader();
 						messageSetReader.init(decompressionBytes, 0, decompressedSize);
-						
-						if (messageSetReader.isReady())
-						{
+
+						if (messageSetReader.isReady()) {
 							bytesCopied = messageSetReader.getMessage(dest, pos, maxLength);
 							offset = messageSetReader.getOffset();
 						}
@@ -237,13 +203,10 @@ public class MessageSetReader
 			}
 
 			buffer.position(buffer.position() + valueLength);
-			
-			if ((messageSetReader == null || !messageSetReader.isReady()) && !buffer.hasRemaining())
-			{
+
+			if ((messageSetReader == null || !messageSetReader.isReady()) && !buffer.hasRemaining()) {
 				ready = false;
-			} 
-			else
-			{
+			} else {
 				ready = true;
 			}
 		}
@@ -251,22 +214,17 @@ public class MessageSetReader
 		return bytesCopied;
 	}
 
-	private int decompress(Decompressor decompressor) throws IOException
-	{
-		while (true)
-		{
+	private int decompress(Decompressor decompressor) throws IOException {
+		while (true) {
 			decompressedSize = decompressor.decompress(bytes, buffer.position(), valueLength, decompressionBytes, 0, decompressionBytes.length);
-			if (decompressedSize == -1)
-			{
+			if (decompressedSize == -1) {
 				// Our output buffer was not big enough. So increase our
 				// buffers and retry. This should be very rare.
-				
+
 				LOG.debug("Expanding decompression buffer from {} to {}", decompressionBytes.length, 2 * decompressionBytes.length);
-				
+
 				decompressionBytes = new byte[2 * decompressionBytes.length];
-			} 
-			else
-			{
+			} else {
 				// we didn't fill the buffer. So our buffer was big enough.
 				break;
 			}
@@ -275,27 +233,21 @@ public class MessageSetReader
 		return decompressedSize;
 	}
 
-	private void ensureMessageSetReader()
-	{
-		if (messageSetReader == null)
-		{
+	private void ensureMessageSetReader() {
+		if (messageSetReader == null) {
 			messageSetReader = new MessageSetReader();
 		}
 	}
 
-	private SnappyDecompressor getSnappyDecompressor()
-	{
-		if (snappyDecompressor == null)
-		{
+	private SnappyDecompressor getSnappyDecompressor() {
+		if (snappyDecompressor == null) {
 			snappyDecompressor = new SnappyDecompressor();
 		}
 		return snappyDecompressor;
 	}
 
-	private GzipDecompressor getGzipDecompressor()
-	{
-		if (gzipDecompressor == null)
-		{
+	private GzipDecompressor getGzipDecompressor() {
+		if (gzipDecompressor == null) {
 			gzipDecompressor = new GzipDecompressor();
 		}
 		return gzipDecompressor;
@@ -308,9 +260,7 @@ public class MessageSetReader
 	 *
 	 * @return <code>true</code> if this MessageSetReader is ready, otherwise <code>false</code>.
 	 */
-	
-	public boolean isReady()
-	{
+	public boolean isReady() {
 		return ready;
 	}
 
@@ -319,9 +269,7 @@ public class MessageSetReader
 	 *
 	 * @return the offset of the last message read.
 	 */
-	
-	public long getOffset()
-	{
+	public long getOffset() {
 		return offset;
 	}
 
@@ -330,9 +278,7 @@ public class MessageSetReader
 	 *
 	 * @return the offset of the next message that would be returned.
 	 */
-	
-	public long getNextOffset()
-	{
+	public long getNextOffset() {
 		return offset + 1;
 	}
 

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.meta;
 
 import java.util.HashSet;
@@ -23,47 +22,48 @@ import java.util.Set;
  * Holder for information about a partition.
  */
 public class Partition {
-  int partId;
-  int leader;
 
-  Set<Integer> replicas = new HashSet<Integer>();
-  Set<Integer> inSyncReplicas = new HashSet<Integer>();
+	int partId;
+	int leader;
 
-  public Partition() {
-  }
+	Set<Integer> replicas = new HashSet<Integer>();
+	Set<Integer> inSyncReplicas = new HashSet<Integer>();
 
-  public Partition(int partId) {
-    this.partId = partId;
-  }
+	public Partition() {
+	}
 
-  public int getPartId() {
-    return partId;
-  }
+	public Partition(int partId) {
+		this.partId = partId;
+	}
 
-  public void setPartId(int partId) {
-    this.partId = partId;
-  }
+	public int getPartId() {
+		return partId;
+	}
 
-  public int getLeader() {
-    return leader;
-  }
+	public void setPartId(int partId) {
+		this.partId = partId;
+	}
 
-  public void setLeader(int leader) {
-    this.leader = leader;
-  }
+	public int getLeader() {
+		return leader;
+	}
 
-  public Set<Integer> getReplicas() {
-    return replicas;
-  }
+	public void setLeader(int leader) {
+		this.leader = leader;
+	}
 
-  public Set<Integer> getInSyncReplicas() {
-    return inSyncReplicas;
-  }
+	public Set<Integer> getReplicas() {
+		return replicas;
+	}
 
-  @Override
-  public String toString() {
-    return "Partition [partId=" + partId + ", leader=" + leader + ", replicas="
-        + replicas + ", inSyncReplicas=" + inSyncReplicas + "]";
-  }
+	public Set<Integer> getInSyncReplicas() {
+		return inSyncReplicas;
+	}
+
+	@Override
+	public String toString() {
+		return "Partition [partId=" + partId + ", leader=" + leader + ", replicas="
+			 + replicas + ", inSyncReplicas=" + inSyncReplicas + "]";
+	}
 
 }

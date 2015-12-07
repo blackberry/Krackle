@@ -13,59 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.meta;
 
 /**
  * Class to hold the id, host and port of a Kafka broker.
  */
 public class Broker {
-  private int nodeId;
-  private String host;
-  private int port;
 
-  public Broker() {
-  }
+	private int nodeId;
+	private String host;
+	private int port;
 
-  public Broker(int nodeId, String host, int port) {
-    this.nodeId = nodeId;
-    this.host = host;
-    this.port = port;
-  }
+	public Broker() {
+	}
 
-  public int getNodeId() {
-    return nodeId;
-  }
+	public Broker(int nodeId, String host, int port) {
+		this.nodeId = nodeId;
+		this.host = host;
+		this.port = port;
+	}
 
-  public void setNodeId(int nodeId) {
-    this.nodeId = nodeId;
-  }
+	public int getNodeId() {
+		return nodeId;
+	}
 
-  public String getHost() {
-    return host;
-  }
+	public void setNodeId(int nodeId) {
+		this.nodeId = nodeId;
+	}
 
-  public void setHost(String host) {
-    this.host = host;
-  }
+	public String getHost() {
+		return host;
+	}
 
-  public int getPort() {
-    return port;
-  }
+	public void setHost(String host) {
+		this.host = host;
+	}
 
-  public void setPort(int port) {
-    this.port = port;
-  }
+	public int getPort() {
+		return port;
+	}
 
-  public String getNiceDescription()
-  {
-	  return "node " + nodeId + " @ " + host + ":" + port;
-  }
-  
-  @Override
-  public String toString() {
-    return "Broker [nodeId=" + nodeId + ", host=" + host + ", port=" + port
-        + "]";
-  }
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	public String getNiceDescription() {
+		return "node " + nodeId + " @ " + host + ":" + port;
+	}
+
+	@Override
+	public String toString() {
+		return "Broker [nodeId=" + nodeId + ", host=" + host + ", port=" + port
+			 + "]";
+	}
 
 }

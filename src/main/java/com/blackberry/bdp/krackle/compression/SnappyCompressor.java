@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.compression;
 
 import java.io.IOException;
 
 import org.xerial.snappy.Snappy;
-
 
 import com.blackberry.bdp.krackle.Constants;
 
@@ -27,44 +25,45 @@ import com.blackberry.bdp.krackle.Constants;
  * Compressor implementation that used the Snappy algorithm.
  */
 public class SnappyCompressor implements Compressor {
-  private final static byte[] header = new byte[] { //
-  -126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, // Magic number
-      0, 0, 0, 1, // version
-      0, 0, 0, 1 // min compatable version
-  };
-  private final static int headerLength = header.length;
 
-  private int compressedLength;
-  private int maxCompressedSize;
+	private final static byte[] header = new byte[]{ //
+		-126, 'S', 'N', 'A', 'P', 'P', 'Y', 0, // Magic number
+		0, 0, 0, 1, // version
+		0, 0, 0, 1 // min compatable version
+	};
+	private final static int headerLength = header.length;
 
-  @Override
-  public byte getAttribute() {
-    return Constants.SNAPPY;
-  }
+	private int compressedLength;
+	private int maxCompressedSize;
 
-  @Override
-  public int compress(byte[] src, int srcPos, int length, byte[] dest,
-      int destPos) throws IOException {
-    System.arraycopy(header, 0, dest, destPos, headerLength);
+	@Override
+	public byte getAttribute() {
+		return Constants.SNAPPY;
+	}
 
-    // Compressed size cannot be greater than what we have available
-    maxCompressedSize = dest.length - destPos - headerLength - 4;
-    if (Snappy.maxCompressedLength(length) > maxCompressedSize) {
-      return -1;
-    }
+	@Override
+	public int compress(byte[] src, int srcPos, int length, byte[] dest,
+		 int destPos) throws IOException {
+		System.arraycopy(header, 0, dest, destPos, headerLength);
 
-    compressedLength = Snappy.compress(src, srcPos, length, dest, destPos
-        + headerLength + 4);
-    writeInt(compressedLength, dest, destPos + headerLength);
+		// Compressed size cannot be greater than what we have available
+		maxCompressedSize = dest.length - destPos - headerLength - 4;
+		if (Snappy.maxCompressedLength(length) > maxCompressedSize) {
+			return -1;
+		}
 
-    return headerLength + 4 + compressedLength;
-  }
+		compressedLength = Snappy.compress(src, srcPos, length, dest, destPos
+			 + headerLength + 4);
+		writeInt(compressedLength, dest, destPos + headerLength);
 
-  private void writeInt(int i, byte[] dest, int pos) {
-    dest[pos] = (byte) (i >> 24);
-    dest[pos + 1] = (byte) (i >> 16);
-    dest[pos + 2] = (byte) (i >> 8);
-    dest[pos + 3] = (byte) i;
-  }
+		return headerLength + 4 + compressedLength;
+	}
+
+	private void writeInt(int i, byte[] dest, int pos) {
+		dest[pos] = (byte) (i >> 24);
+		dest[pos + 1] = (byte) (i >> 16);
+		dest[pos + 2] = (byte) (i >> 8);
+		dest[pos + 3] = (byte) i;
+	}
 
 }

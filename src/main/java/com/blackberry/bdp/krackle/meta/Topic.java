@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.meta;
 
 import java.util.ArrayList;
@@ -23,43 +22,45 @@ import java.util.List;
  * Holder for information about a topic.
  */
 public class Topic {
-  String name;
-  List<Partition> partitions = new ArrayList<Partition>();
 
-  public Topic() {
-  }
+	String name;
+	List<Partition> partitions = new ArrayList<Partition>();
 
-  public Topic(String name) {
-    this.name = name;
-  }
+	public Topic() {
+	}
 
-  public int getNumPartitions() {
-    return partitions.size();
-  }
+	public Topic(String name) {
+		this.name = name;
+	}
 
-  public Partition getPartition(int i) {
-    for (Partition p : partitions) {
-      if (p.getPartId() == i) {
-        return p;
-      }
-    }
-    return null;
-  }
+	public int getNumPartitions() {
+		return partitions.size();
+	}
 
-  public String getName() {
-    return name;
-  }
+	public Partition getPartition(int i) {
+		for (Partition p : partitions) {
+			if (p.getPartId() == i) {
+				return p;
+			}
+		}
+		return null;
+	}
 
-  public void setName(String name) {
-    this.name = name;
-  }
+	public String getName() {
+		return name;
+	}
 
-  public List<Partition> getPartitions() {
-    return partitions;
-  }
+	public void setName(String name) {
+		this.name = name;
+	}
 
-  @Override
-  public String toString() {
-    return "Topic [name=" + name + ", partitions=" + partitions + "]";
-  }
+	public List<Partition> getPartitions() {
+		return partitions;
+	}
+
+	@Override
+	public String toString() {
+		return "Topic [name=" + name + ", partitions=" + partitions + "]";
+	}
+
 }

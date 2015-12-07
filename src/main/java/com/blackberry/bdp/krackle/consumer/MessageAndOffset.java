@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.consumer;
 
 /**
@@ -21,31 +20,32 @@ package com.blackberry.bdp.krackle.consumer;
  * long.
  */
 public class MessageAndOffset {
-  private byte[] message;
-  private long offset;
 
-  public MessageAndOffset() {
-  }
+	private byte[] message;
+	private long offset;
 
-  public MessageAndOffset(byte[] message, long offset) {
-    this.message = message;
-    this.offset = offset;
-  }
+	public MessageAndOffset() {
+	}
 
-  public byte[] getMessage() {
-    return message;
-  }
+	public MessageAndOffset(byte[] message, long offset) {
+		this.message = message;
+		this.offset = offset;
+	}
 
-  public void setMessage(byte[] message) {
-    this.message = message;
-  }
+	public byte[] getMessage() {
+		return message;
+	}
 
-  public long getOffset() {
-    return offset;
-  }
+	public void setMessage(byte[] message) {
+		this.message = message;
+	}
 
-  public void setOffset(long offset) {
-    this.offset = offset;
-  }
+	public long getOffset() {
+		return offset;
+	}
+
+	public void setOffset(long offset) {
+		this.offset = offset;
+	}
 
 }

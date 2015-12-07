@@ -672,7 +672,7 @@ public class Producer {
 						if (metadata == null || socket == null) {
 							updateMetaDataAndConnection();
 							toSendBuffer.putInt(partitionPosition, partition);
-						} 
+						}
 
 						LOG.debug("[{}] Sender Thread-{} ({}) Sending Block with CorrelationId: {} ClientId: {} Socket: {}", topicString, senderThreads.indexOf(Thread.currentThread()), Thread.currentThread().getId(), correlationId, clientIdString, socket.toString());
 						// Send request
@@ -725,13 +725,13 @@ public class Producer {
 						break;
 					} catch (Throwable t) {
 						metadata = null;
-												
+
 						//IPGBD-3859 - mbruce - Close the socket and null out the object, so that we can re-establish the socket and connection when we update the metadata
 						brokerAddress = null;
-						if (socket != null)	{
-							try	{
+						if (socket != null) {
+							try {
 								socket.close();
-							} catch (IOException e)	{
+							} catch (IOException e) {
 								LOG.error("Error closing connection to broker.", e);
 							}
 							socket = null;
