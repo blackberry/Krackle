@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.compression;
 
 import java.io.IOException;
@@ -28,85 +27,87 @@ import com.blackberry.bdp.krackle.Constants;
  * Compressor implementation that used the GZIP algorithm.
  */
 public class GzipCompressor implements Compressor {
-  private static final byte[] HEADER_BYTES = new byte[] //
-  { (byte) 0x1f, (byte) 0x8b, // Magic number
-      8, // Deflate
-      0, // All flags zero
-      0, 0, 0, 0, // Set MTIME to zero, for ease of use
-      0, // No extra flags
-      3 // UNIX OS
-  };
-  private final Deflater deflater;
-  private final CRC32 crc;
-  private final ByteBuffer bb;
-  private int compressedSize;
-  private int maxOutputSize;
-  private int deflaterOutputSize;
-  private byte[] testBytes = new byte[1];
 
-  /**
-   * New instance with default compression level.
-   */
-  public GzipCompressor() {
-    this(Deflater.DEFAULT_COMPRESSION);
-  }
+	private static final byte[] HEADER_BYTES = new byte[] //
+	{(byte) 0x1f, (byte) 0x8b, // Magic number
+		8, // Deflate
+		0, // All flags zero
+		0, 0, 0, 0, // Set MTIME to zero, for ease of use
+		0, // No extra flags
+		3 // UNIX OS
+};
+	private final Deflater deflater;
+	private final CRC32 crc;
+	private final ByteBuffer bb;
+	private int compressedSize;
+	private int maxOutputSize;
+	private int deflaterOutputSize;
+	private byte[] testBytes = new byte[1];
 
-  /**
-   * New instance with the given compression level
-   * 
-   * @param compressionLevel
-   *          requested compression level. Valid values are <code>-1</code>
-   *          (default compression), <code>0</code> (no compression),
-   *          <code>1-9</code>.
-   */
-  public GzipCompressor(int compressionLevel) {
-    deflater = new Deflater(compressionLevel, true);
-    crc = new CRC32();
-    bb = ByteBuffer.allocate(8);
-    bb.order(ByteOrder.LITTLE_ENDIAN);
-  }
+	/**
+	 * New instance with default compression level.
+	 */
+	public GzipCompressor() {
+		this(Deflater.DEFAULT_COMPRESSION);
+	}
 
-  @Override
-  public byte getAttribute() {
-    return Constants.GZIP;
-  }
+	/**
+	 * New instance with the given compression level
+	 *
+	 * @param compressionLevel
+	 *          requested compression level. Valid values are <code>-1</code>
+	 *          (default compression), <code>0</code> (no compression),
+	 *          <code>1-9</code>.
+	 */
+	public GzipCompressor(int compressionLevel) {
+		deflater = new Deflater(compressionLevel, true);
+		crc = new CRC32();
+		bb = ByteBuffer.allocate(8);
+		bb.order(ByteOrder.LITTLE_ENDIAN);
+	}
 
-  @Override
-  public int compress(byte[] src, int srcPos, int length, byte[] dest,
-      int destPos) throws IOException {
-    System.arraycopy(HEADER_BYTES, 0, dest, destPos, 10);
-    compressedSize = 10;
+	@Override
+	public byte getAttribute() {
+		return Constants.GZIP;
+	}
 
-    deflater.reset();
-    deflater.setInput(src, srcPos, length);
-    deflater.finish();
+	@Override
+	public int compress(byte[] src, int srcPos, int length, byte[] dest,
+		 int destPos) throws IOException {
+		System.arraycopy(HEADER_BYTES, 0, dest, destPos, 10);
+		compressedSize = 10;
+
+		deflater.reset();
+		deflater.setInput(src, srcPos, length);
+		deflater.finish();
 
     // The output can't exceed the bytes we have to work with, less 10 bytes for
-    // headers and 8 bytes for footers.
-    maxOutputSize = dest.length - destPos - 10 - 8;
-    deflaterOutputSize = deflater.deflate(dest, destPos + compressedSize,
-        maxOutputSize);
-    if (deflaterOutputSize == maxOutputSize) {
+		// headers and 8 bytes for footers.
+		maxOutputSize = dest.length - destPos - 10 - 8;
+		deflaterOutputSize = deflater.deflate(dest, destPos + compressedSize,
+			 maxOutputSize);
+		if (deflaterOutputSize == maxOutputSize) {
       // We just filled the output buffer! Either we have more to decompress, or
-      // we don't. If we do, then that's an error. If we don't then that's fine.
-      // So let's check.
-      if (deflater.deflate(testBytes, 0, 1) == 1) {
-        // We couldn't fit everything in the output buffer.
-        return -1;
-      }
-    }
-    compressedSize += deflaterOutputSize;
+			// we don't. If we do, then that's an error. If we don't then that's fine.
+			// So let's check.
+			if (deflater.deflate(testBytes, 0, 1) == 1) {
+				// We couldn't fit everything in the output buffer.
+				return -1;
+			}
+		}
+		compressedSize += deflaterOutputSize;
 
-    crc.reset();
-    crc.update(src, srcPos, length);
-    bb.clear();
-    bb.putInt((int) crc.getValue());
-    bb.putInt(length);
-    bb.rewind();
-    bb.get(dest, destPos + compressedSize, 8);
+		crc.reset();
+		crc.update(src, srcPos, length);
+		bb.clear();
+		bb.putInt((int) crc.getValue());
+		bb.putInt(length);
+		bb.rewind();
+		bb.get(dest, destPos + compressedSize, 8);
 
-    compressedSize += 8;
+		compressedSize += 8;
 
-    return compressedSize;
-  }
+		return compressedSize;
+	}
+
 }

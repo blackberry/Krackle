@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.meta;
 
 import java.io.IOException;
@@ -36,7 +35,7 @@ import com.blackberry.bdp.krackle.Constants;
 
 /**
  * Gather and store metadata for a topic.
- * 
+ *
  * Contents are
  * <ul>
  * <li>brokers: a map of broker id to Broker object</li>
@@ -44,249 +43,252 @@ import com.blackberry.bdp.krackle.Constants;
  * </ul>
  */
 public class MetaData {
-  private static final Logger LOG = LoggerFactory.getLogger(MetaData.class);
-  private static final Charset UTF8 = Charset.forName("UTF-8");
 
-  private Map<Integer, Broker> brokers = new HashMap<Integer, Broker>();
-  private Map<String, Topic> topics = new HashMap<String, Topic>();
-  private int correlationId;
+	private static final Logger LOG = LoggerFactory.getLogger(MetaData.class);
+	private static final Charset UTF8 = Charset.forName("UTF-8");
 
-  /**
-   * New instance, with the list of seed brokers represented as a comma
-   * separated list of host:port entries.
-   * 
-   * @param metadataBrokerListString
-   *          comma separated list of host:port entries.
-   * @param topicString
-   *          topic to get metadata about.
-   * @param clientIdString
-   *          clientId to send with request.
-   * @return a new MetaData object containing information on the topic.
-   */
-  public static MetaData getMetaData(String metadataBrokerListString,
-      String topicString, String clientIdString) {
-    List<String> metadataBrokerList = Arrays.asList(metadataBrokerListString
-        .split(","));
-    return getMetaData(metadataBrokerList, topicString, clientIdString);
-  }
+	private Map<Integer, Broker> brokers = new HashMap<Integer, Broker>();
+	private Map<String, Topic> topics = new HashMap<String, Topic>();
+	private int correlationId;
 
-  /**
-   * New instance, with the list of seed brokers represented a List of host:port
-   * entries.
-   * 
-   * @param metadataBrokerListString
-   *          comma separated list of host:port entries.
-   * @param topicString
-   *          topic to get metadata about.
-   * @param clientIdString
-   *          clientId to send with request.
-   * @return a new MetaData object containing information on the topic.
-   */
-  public static MetaData getMetaData(List<String> metadataBrokerList,
-      String topicString, String clientIdString) {
-    LOG.info("Getting metadata for {}", topicString);
+	/**
+	 * New instance, with the list of seed brokers represented as a comma
+	 * separated list of host:port entries.
+	 *
+	 * @param metadataBrokerListString
+	 *          comma separated list of host:port entries.
+	 * @param topicString
+	 *          topic to get metadata about.
+	 * @param clientIdString
+	 *          clientId to send with request.
+	 * @return a new MetaData object containing information on the topic.
+	 */
+	public static MetaData getMetaData(String metadataBrokerListString,
+		 String topicString, String clientIdString) {
+		List<String> metadataBrokerList = Arrays.asList(metadataBrokerListString
+			 .split(","));
+		return getMetaData(metadataBrokerList, topicString, clientIdString);
+	}
 
-    MetaData metadata = new MetaData();
-    metadata.setCorrelationId((int) System.currentTimeMillis());
+	/**
+	 * New instance, with the list of seed brokers represented a List of host:port
+	 * entries.
+	 *
+	 * @param metadataBrokerListString
+	 *          comma separated list of host:port entries.
+	 * @param topicString
+	 *          topic to get metadata about.
+	 * @param clientIdString
+	 *          clientId to send with request.
+	 * @return a new MetaData object containing information on the topic.
+	 */
+	public static MetaData getMetaData(List<String> metadataBrokerList,
+		 String topicString, String clientIdString) {
+		LOG.info("Getting metadata for {}", topicString);
 
-    // Get the broker seeds from the config.
-    List<HostAndPort> seedBrokers = new ArrayList<HostAndPort>();
-    for (String hnp : metadataBrokerList) {
-      String[] hostPort = hnp.split(":", 2);
-      seedBrokers.add(new HostAndPort(hostPort[0], Integer
-          .parseInt(hostPort[1])));
-    }
+		MetaData metadata = new MetaData();
+		metadata.setCorrelationId((int) System.currentTimeMillis());
 
-    // Try each seed broker in a random order
-    Collections.shuffle(seedBrokers);
+		// Get the broker seeds from the config.
+		List<HostAndPort> seedBrokers = new ArrayList<HostAndPort>();
+		for (String hnp : metadataBrokerList) {
+			String[] hostPort = hnp.split(":", 2);
+			seedBrokers.add(new HostAndPort(hostPort[0], Integer
+				 .parseInt(hostPort[1])));
+		}
 
-    Socket sock = null;
-    for (HostAndPort hnp : seedBrokers) {
-      try {
-        sock = new Socket(hnp.host, hnp.port);
-        sock.setSoTimeout(5000);
-      } catch (UnknownHostException e) {
-        LOG.warn("Unknown host: {}", hnp.host);
-        continue;
-      } catch (IOException e) {
-        LOG.warn("Error connecting to {}:{}", hnp.host, hnp.port);
-        continue;
-      }
-      break;
-    }
+		// Try each seed broker in a random order
+		Collections.shuffle(seedBrokers);
 
-    if (sock == null) {
-      LOG.error("Unable to connect to any seed broker to updata metadata.");
-      return null;
-    }
+		Socket sock = null;
+		for (HostAndPort hnp : seedBrokers) {
+			try {
+				sock = new Socket(hnp.host, hnp.port);
+				sock.setSoTimeout(5000);
+			} catch (UnknownHostException e) {
+				LOG.warn("Unknown host: {}", hnp.host);
+				continue;
+			} catch (IOException e) {
+				LOG.warn("Error connecting to {}:{}", hnp.host, hnp.port);
+				continue;
+			}
+			break;
+		}
 
-    try {
-      sock.getOutputStream().write(
-          buildMetadataRequest(topicString.getBytes(UTF8),
-              clientIdString.getBytes(UTF8), metadata.getCorrelationId()));
+		if (sock == null) {
+			LOG.error("Unable to connect to any seed broker to updata metadata.");
+			return null;
+		}
 
-      byte[] sizeBuffer = new byte[4];
-      InputStream in = sock.getInputStream();
-      int bytesRead = 0;
-      while (bytesRead < 4) {
-        int read = in.read(sizeBuffer, bytesRead, 4 - bytesRead);
-        if (read == -1) {
-          throw new IOException(
-              "Stream ended before data length could be read.");
-        }
-        bytesRead += read;
-      }
-      int length = ByteBuffer.wrap(sizeBuffer).getInt();
+		try {
+			sock.getOutputStream().write(
+				 buildMetadataRequest(topicString.getBytes(UTF8),
+					  clientIdString.getBytes(UTF8), metadata.getCorrelationId()));
 
-      byte[] responseArray = new byte[length];
-      bytesRead = 0;
-      while (bytesRead < length) {
-        int read = in.read(responseArray, bytesRead, length - bytesRead);
-        if (read == -1) {
-          throw new IOException("Stream ended before end of response.");
-        }
-        bytesRead += read;
-      }
-      ByteBuffer responseBuffer = ByteBuffer.wrap(responseArray);
-      int cid = responseBuffer.getInt();
-      if (cid != metadata.getCorrelationId()) {
-        LOG.error("Got back wrong correlation id.");
-        return null;
-      }
+			byte[] sizeBuffer = new byte[4];
+			InputStream in = sock.getInputStream();
+			int bytesRead = 0;
+			while (bytesRead < 4) {
+				int read = in.read(sizeBuffer, bytesRead, 4 - bytesRead);
+				if (read == -1) {
+					throw new IOException(
+						 "Stream ended before data length could be read.");
+				}
+				bytesRead += read;
+			}
+			int length = ByteBuffer.wrap(sizeBuffer).getInt();
 
-      // Load the brokers
-      int numBrokers = responseBuffer.getInt();
-      for (int i = 0; i < numBrokers; i++) {
-        int nodeId = responseBuffer.getInt();
-        String host = readString(responseBuffer);
-        int port = responseBuffer.getInt();
+			byte[] responseArray = new byte[length];
+			bytesRead = 0;
+			while (bytesRead < length) {
+				int read = in.read(responseArray, bytesRead, length - bytesRead);
+				if (read == -1) {
+					throw new IOException("Stream ended before end of response.");
+				}
+				bytesRead += read;
+			}
+			ByteBuffer responseBuffer = ByteBuffer.wrap(responseArray);
+			int cid = responseBuffer.getInt();
+			if (cid != metadata.getCorrelationId()) {
+				LOG.error("Got back wrong correlation id.");
+				return null;
+			}
 
-        metadata.getBrokers().put(nodeId, new Broker(nodeId, host, port));
+			// Load the brokers
+			int numBrokers = responseBuffer.getInt();
+			for (int i = 0; i < numBrokers; i++) {
+				int nodeId = responseBuffer.getInt();
+				String host = readString(responseBuffer);
+				int port = responseBuffer.getInt();
 
-        LOG.debug("Broker {} @ {}:{}", nodeId, host, port);
-      }
+				metadata.getBrokers().put(nodeId, new Broker(nodeId, host, port));
 
-      // Load the topics
-      int numTopics = responseBuffer.getInt();
-      for (int i = 0; i < numTopics; i++) {
+				LOG.debug("Broker {} @ {}:{}", nodeId, host, port);
+			}
 
-        short errorCode = responseBuffer.getShort();
-        String name = readString(responseBuffer);
-        Topic t = new Topic(name);
-        LOG.debug("Topic {} (Error {})", name, errorCode);
+			// Load the topics
+			int numTopics = responseBuffer.getInt();
+			for (int i = 0; i < numTopics; i++) {
 
-        int numParts = responseBuffer.getInt();
-        for (int j = 0; j < numParts; j++) {
+				short errorCode = responseBuffer.getShort();
+				String name = readString(responseBuffer);
+				Topic t = new Topic(name);
+				LOG.debug("Topic {} (Error {})", name, errorCode);
 
-          short partError = responseBuffer.getShort();
-          int partId = responseBuffer.getInt();
-          int leader = responseBuffer.getInt();
-          LOG.debug("    Partition ID={}, Leader={} (Error={})", partId,
-              leader, partError);
+				int numParts = responseBuffer.getInt();
+				for (int j = 0; j < numParts; j++) {
 
-          Partition part = new Partition(partId);
-          part.setLeader(leader);
+					short partError = responseBuffer.getShort();
+					int partId = responseBuffer.getInt();
+					int leader = responseBuffer.getInt();
+					LOG.debug("    Partition ID={}, Leader={} (Error={})", partId,
+						 leader, partError);
 
-          int numReplicas = responseBuffer.getInt();
-          for (int k = 0; k < numReplicas; k++) {
-            int rep = responseBuffer.getInt();
-            LOG.debug("        Replica on {}", rep);
-            part.getReplicas().add(rep);
-          }
+					Partition part = new Partition(partId);
+					part.setLeader(leader);
 
-          int numIsr = responseBuffer.getInt();
-          for (int k = 0; k < numIsr; k++) {
-            int isr = responseBuffer.getInt();
-            LOG.debug("        Isr on {}", isr);
-            part.getInSyncReplicas().add(isr);
-          }
+					int numReplicas = responseBuffer.getInt();
+					for (int k = 0; k < numReplicas; k++) {
+						int rep = responseBuffer.getInt();
+						LOG.debug("        Replica on {}", rep);
+						part.getReplicas().add(rep);
+					}
 
-          t.getPartitions().add(part);
-        }
+					int numIsr = responseBuffer.getInt();
+					for (int k = 0; k < numIsr; k++) {
+						int isr = responseBuffer.getInt();
+						LOG.debug("        Isr on {}", isr);
+						part.getInSyncReplicas().add(isr);
+					}
 
-        metadata.getTopics().put(name, t);
-      }
+					t.getPartitions().add(part);
+				}
 
-    } catch (IOException e) {
-      LOG.error("Failed to get metadata");
-      return null;
-    }
+				metadata.getTopics().put(name, t);
+			}
 
-    LOG.info("Metadata request successful");
-    return metadata;
-  }
+		} catch (IOException e) {
+			LOG.error("Failed to get metadata");
+			return null;
+		}
 
-  private static String readString(ByteBuffer bb) {
-    short length = bb.getShort();
-    byte[] a = new byte[length];
-    bb.get(a);
-    return new String(a, UTF8);
-  }
+		LOG.info("Metadata request successful");
+		return metadata;
+	}
 
-  private static byte[] buildMetadataRequest(byte[] topic, byte[] clientId,
-      int correlationId) {
-    byte[] request = new byte[20 + clientId.length + topic.length];
-    ByteBuffer bb = ByteBuffer.wrap(request);
-    bb.putInt(16 + clientId.length + topic.length);
-    bb.putShort(Constants.APIKEY_METADATA);
-    bb.putShort(Constants.API_VERSION);
-    bb.putInt(correlationId);
-    bb.putShort((short) clientId.length);
-    bb.put(clientId);
+	private static String readString(ByteBuffer bb) {
+		short length = bb.getShort();
+		byte[] a = new byte[length];
+		bb.get(a);
+		return new String(a, UTF8);
+	}
 
-    // topics.
-    bb.putInt(1);
-    bb.putShort((short) topic.length);
-    bb.put(topic);
+	private static byte[] buildMetadataRequest(byte[] topic, byte[] clientId,
+		 int correlationId) {
+		byte[] request = new byte[20 + clientId.length + topic.length];
+		ByteBuffer bb = ByteBuffer.wrap(request);
+		bb.putInt(16 + clientId.length + topic.length);
+		bb.putShort(Constants.APIKEY_METADATA);
+		bb.putShort(Constants.API_VERSION);
+		bb.putInt(correlationId);
+		bb.putShort((short) clientId.length);
+		bb.put(clientId);
 
-    return request;
-  }
+		// topics.
+		bb.putInt(1);
+		bb.putShort((short) topic.length);
+		bb.put(topic);
+
+		return request;
+	}
 
   // We're storing the given hostname and not an InetAddress since we want to
-  // re-resolve the address each time. This way changes to DNS can make us
-  // change properly.
-  private static class HostAndPort {
-    String host;
-    int port;
+	// re-resolve the address each time. This way changes to DNS can make us
+	// change properly.
+	private static class HostAndPort {
 
-    HostAndPort(String host, int port) {
-      this.host = host;
-      this.port = port;
-    }
+		String host;
+		int port;
 
-    @Override
-    public String toString() {
-      return "HostAndPort [host=" + host + ", port=" + port + "]";
-    }
-  }
+		HostAndPort(String host, int port) {
+			this.host = host;
+			this.port = port;
+		}
 
-  public Map<Integer, Broker> getBrokers() {
-    return brokers;
-  }
+		@Override
+		public String toString() {
+			return "HostAndPort [host=" + host + ", port=" + port + "]";
+		}
 
-  public Broker getBroker(Integer id) {
-    return brokers.get(id);
-  }
+	}
 
-  public Map<String, Topic> getTopics() {
-    return topics;
-  }
+	public Map<Integer, Broker> getBrokers() {
+		return brokers;
+	}
 
-  public Topic getTopic(String name) {
-    return topics.get(name);
-  }
+	public Broker getBroker(Integer id) {
+		return brokers.get(id);
+	}
 
-  public int getCorrelationId() {
-    return correlationId;
-  }
+	public Map<String, Topic> getTopics() {
+		return topics;
+	}
 
-  public void setCorrelationId(int correlationId) {
-    this.correlationId = correlationId;
-  }
+	public Topic getTopic(String name) {
+		return topics.get(name);
+	}
 
-  @Override
-  public String toString() {
-    return "MetaData [brokers=" + brokers + ", topics=" + topics + "]";
-  }
+	public int getCorrelationId() {
+		return correlationId;
+	}
+
+	public void setCorrelationId(int correlationId) {
+		this.correlationId = correlationId;
+	}
+
+	@Override
+	public String toString() {
+		return "MetaData [brokers=" + brokers + ", topics=" + topics + "]";
+	}
 
 }

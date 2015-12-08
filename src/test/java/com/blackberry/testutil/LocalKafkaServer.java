@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.testutil;
 
 import java.io.File;
@@ -27,39 +26,41 @@ import kafka.server.KafkaServerStartable;
 import org.apache.commons.io.FileUtils;
 
 public class LocalKafkaServer {
-  private String nodeId = "0";
-  private String port = "9876";
-  private String logDir = FileUtils.getTempDirectoryPath() + "/kafka.log";
-  private String zkConnect = "localhost:21818";
-  private KafkaServerStartable server;
 
-  public LocalKafkaServer() throws IOException {
+	private String nodeId = "0";
+	private String port = "9876";
+	private String logDir = FileUtils.getTempDirectoryPath() + "/kafka.log";
+	private String zkConnect = "localhost:21818";
+	private KafkaServerStartable server;
 
-    while (new File(logDir).exists()) {
-      FileUtils.deleteDirectory(new File(logDir));
-    }
+	public LocalKafkaServer() throws IOException {
 
-    Properties props = new Properties();
-    props.put("broker.id", nodeId);
-    props.put("port", port);
-    props.put("log.dir", logDir);
-    props.put("zookeeper.connect", zkConnect);
-    props.put("host.name", "127.0.0.1");
-    KafkaConfig conf = new KafkaConfig(props);
+		while (new File(logDir).exists()) {
+			FileUtils.deleteDirectory(new File(logDir));
+		}
 
-    server = new KafkaServerStartable(conf);
-    server.startup();
-  }
+		Properties props = new Properties();
+		props.put("broker.id", nodeId);
+		props.put("port", port);
+		props.put("log.dir", logDir);
+		props.put("zookeeper.connect", zkConnect);
+		props.put("host.name", "127.0.0.1");
+		KafkaConfig conf = new KafkaConfig(props);
 
-  public void shutdown() throws IOException {
-    server.shutdown();
-    server.awaitShutdown();
-    FileUtils.deleteDirectory(new File(logDir));
-  }
+		server = new KafkaServerStartable(conf);
+		server.startup();
+	}
 
-  public void createTopic(String topic) {
-    TopicCommand.main(new String[] { "--create", "--zookeeper",
-        "localhost:21818", "--replication-factor", "1", "--partition", "1",
-        "--topic", topic });
-  }
+	public void shutdown() throws IOException {
+		server.shutdown();
+		server.awaitShutdown();
+		FileUtils.deleteDirectory(new File(logDir));
+	}
+
+	public void createTopic(String topic) {
+		TopicCommand.main(new String[]{"--create", "--zookeeper",
+			"localhost:21818", "--replication-factor", "1", "--partition", "1",
+			"--topic", topic});
+	}
+
 }

@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory;
  * Many of these properties are the same as those in the standard Java client, as documented at http://kafka.apache.org/documentation.html#producerconfigs
  *
  * <p><b>NOTE:</b> Every single one of these properties can be overwritten for a specific topic by using the following property patten:</p>
- * 
+ *
  * <p>source.&lt;<i>topic</i>&gt.&lt;<i>property</i>&gt</p>
- *  
+ *
  * <p>Valid properties are</p>
- * 
+ *
  * <table border="1">
  *
  * <tr>
@@ -144,16 +144,15 @@ import org.slf4j.LoggerFactory;
  * </tr>
  *
  * </table>
- * 
+ *
  * <p><b>NOTE: Quick rotate, rotate, and partition rotation in General</b></p>
- 
- * <p>Quick rotate is no longer a supported configuration item.  Instead all topic meta data refreshes will rotate partitions and if quicker rotation is required than topic.metadata.refresh.interval.ms can be configured accordingly.  Regular topic specific overrides are possible as well for topics that require faster rotaiton.</p>
- 
- * 
- */
 
-public class ProducerConfiguration
-{
+ * <p>Quick rotate is no longer a supported configuration item.  Instead all topic meta data refreshes will rotate partitions and if quicker rotation is required than topic.metadata.refresh.interval.ms can be configured accordingly.  Regular topic specific overrides are possible as well for topics that require faster rotaiton.</p>
+
+ *
+ */
+public class ProducerConfiguration {
+
 	private static final Logger LOG = LoggerFactory.getLogger(ProducerConfiguration.class);
 
 	protected static final int ONE_MB = 1024 * 1024;
@@ -163,13 +162,13 @@ public class ProducerConfiguration
 	// Options matching the producer client
 	private List<String> metadataBrokerList;
 	private short requestRequiredAcks;
-	private int requestTimeoutMs;	
-	
+	private int requestTimeoutMs;
+
 	private String compressionCodec;
 	private int messageSendMaxRetries;
 	private int retryBackoffMs;
 	private int retryBackoffExponent;
-		
+
 	private int senderThreads;
 	private int partitionsRotate;
 	private long topicMetadataRefreshIntervalMs;
@@ -189,333 +188,298 @@ public class ProducerConfiguration
 	 * @throws Exception
 	 */
 	@Deprecated
-	public ProducerConfiguration(Properties props) throws Exception
-	{
+	public ProducerConfiguration(Properties props) throws Exception {
 		this(props, null);
-	}	
+	}
 
 	/**
-	 * ProducerConfiguration class that supports parsing properties that all support 
+	 * ProducerConfiguration class that supports parsing properties that all support
 	 * being prefixed with a topic name for overriding default values per topic as required
 	 * @param props the properties object  to parse
 	 * @param topicName the topic being configured
 	 * @throws Exception
 	 */
-	public ProducerConfiguration(Properties props, String topicName) throws Exception
-	{
+	public ProducerConfiguration(Properties props, String topicName) throws Exception {
 		this.props = props;
 		this.topicName = topicName;
-		
+
 		LOG.info("Building configuration.");
-		
+
 		metadataBrokerList = parseMetadataBrokerList("metadata.broker.list");
 		queueBufferingMaxMs = parseQueueBufferingMaxMs("queue.buffering.max.ms", "5000");
 		requestRequiredAcks = parseRequestRequiredAcks("request.required.acks", "1");
 		requestTimeoutMs = parseRequestTimeoutMs("request.timeout.ms", "10000");
 		messageSendMaxRetries = parseMessageSendMaxRetries("message.send.max.retries", "3");
 		retryBackoffMs = parseRetryBackoffMs("retry.backoff.ms", "100");
-		retryBackoffExponent = parseRetryBackoffMs("retry.backoff.exponent", "1");		
+		retryBackoffExponent = parseRetryBackoffMs("retry.backoff.exponent", "1");
 		topicMetadataRefreshIntervalMs = parseTopicMetadataRefreshIntervalMs("topic.metadata.refresh.interval.ms", "" + (60 * 10 * 1000));
 		partitionsRotate = parsePartitionsRotate("partitions.rotate", "random");
-		sendBufferSize = parseSendBufferSize("send.buffer.size", "" + (int) (1.5 * 1024 * 1024));	
+		sendBufferSize = parseSendBufferSize("send.buffer.size", "" + (int) (1.5 * 1024 * 1024));
 		compressionCodec = parseCompressionCodec("compression.codec", "none");
 		compressionLevel = parsecCmpressionLevel("gzip.compression.level", "" + Deflater.DEFAULT_COMPRESSION);
 		queueEnqueueTimeoutMs = parseQueueEnqueueTimeoutMs("queue.enqueue.timeout.ms", "-1");
 		senderThreads = parseSenderThreads("sender.threads", "1");
-		
+
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
-	}	
-	
+	}
+
 	/**
 	 *
 	 * @param propName the property name to obtain a topic aware override for
-	 * @return The name of the property 
+	 * @return The name of the property
 	 */
-	public String getTopicAwarePropName (String propName)
-	{
-		if (getTopicName() == null)
-		{
+	public String getTopicAwarePropName(String propName) {
+		if (getTopicName() == null) {
 			return propName;
 		}
-		
+
 		String topicPropName = String.format("source.%s.%s", getTopicName(), propName);
-		
-		if (props.containsKey(topicPropName))
-		{
+
+		if (props.containsKey(topicPropName)) {
 			LOG.debug("topic specific property {} exists that overrides {}  ", topicPropName, propName);
-			return topicPropName;			
+			return topicPropName;
 		}
-		
+
 		return propName;
 	}
-	
-	private List<String> parseMetadataBrokerList(String propName) throws Exception
-	{
-		List<String> myMetadataBrokerList = new ArrayList<>();		
-		String propNameBrokerList = getTopicAwarePropName(propName);		
+
+	private List<String> parseMetadataBrokerList(String propName) throws Exception {
+		List<String> myMetadataBrokerList = new ArrayList<>();
+		String propNameBrokerList = getTopicAwarePropName(propName);
 		String metadataBrokerListString = props.getProperty(propNameBrokerList);
-		
-		if (metadataBrokerListString == null || metadataBrokerListString.isEmpty())
-		{
+
+		if (metadataBrokerListString == null || metadataBrokerListString.isEmpty()) {
 			throw new Exception(String.format("%s cannot be empty", propNameBrokerList));
 		}
-		
-		for (String s : metadataBrokerListString.split(","))
-		{
-			if (s.matches("^[\\.a-zA-Z0-9-]*:\\d+$"))
-			{
+
+		for (String s : metadataBrokerListString.split(",")) {
+			if (s.matches("^[\\.a-zA-Z0-9-]*:\\d+$")) {
 				myMetadataBrokerList.add(s);
-			} 
-			else
-			{
+			} else {
 				throw new Exception(String.format(
-					 "%s must contain a comma separated list of host:port, without spaces).  Got %s", 
+					 "%s must contain a comma separated list of host:port, without spaces).  Got %s",
 					 propNameBrokerList, metadataBrokerListString));
 			}
 		}
-		
+
 		LOG.info("{} = {}", propNameBrokerList, myMetadataBrokerList);
-		
+
 		return myMetadataBrokerList;
 	}
-	
-	private Long parseQueueBufferingMaxMs(String propName, String defaultValue) throws Exception
-	{
-		String propNameQueueBufferignMaxMs = getTopicAwarePropName(propName);		
+
+	private Long parseQueueBufferingMaxMs(String propName, String defaultValue) throws Exception {
+		String propNameQueueBufferignMaxMs = getTopicAwarePropName(propName);
 		Long myQueueBufferingMaxMs = Long.parseLong(props.getProperty(propNameQueueBufferignMaxMs, defaultValue));
-		
-		if (myQueueBufferingMaxMs < 0)
-		{
+
+		if (myQueueBufferingMaxMs < 0) {
 			throw new Exception(String.format("%s cannot be negative", propNameQueueBufferignMaxMs));
 		}
-		
-		LOG.info("{}  = {}", propNameQueueBufferignMaxMs, myQueueBufferingMaxMs);		
-		return myQueueBufferingMaxMs;		
+
+		LOG.info("{}  = {}", propNameQueueBufferignMaxMs, myQueueBufferingMaxMs);
+		return myQueueBufferingMaxMs;
 	}
-	
-	private Short parseRequestRequiredAcks(String propName, String defaultValue) throws Exception
-	{
-		String acksPropertyName = getTopicAwarePropName(propName);		
+
+	private Short parseRequestRequiredAcks(String propName, String defaultValue) throws Exception {
+		String acksPropertyName = getTopicAwarePropName(propName);
 		Short myRequestRequiredAcks = Short.parseShort(props.getProperty(acksPropertyName, defaultValue));
-		
-		if (myRequestRequiredAcks != -1 && myRequestRequiredAcks != 0 && myRequestRequiredAcks != 1)
-		{
+
+		if (myRequestRequiredAcks != -1 && myRequestRequiredAcks != 0 && myRequestRequiredAcks != 1) {
 			throw new Exception(String.format("%s can only be -1, 0 or 1.  Got %s", acksPropertyName, myRequestRequiredAcks));
 		}
-		
-		LOG.info("{} = {}", acksPropertyName, myRequestRequiredAcks);		
+
+		LOG.info("{} = {}", acksPropertyName, myRequestRequiredAcks);
 		return myRequestRequiredAcks;
 	}
-	
-	private Integer parseRequestTimeoutMs(String propName, String defaultValue) throws Exception
-	{
-		String propNameRequestTimeoutMs = getTopicAwarePropName(propName);		
+
+	private Integer parseRequestTimeoutMs(String propName, String defaultValue) throws Exception {
+		String propNameRequestTimeoutMs = getTopicAwarePropName(propName);
 		Integer myRequestTimeoutMs = Integer.parseInt(props.getProperty(propNameRequestTimeoutMs, defaultValue));
-		
-		if (myRequestTimeoutMs < 0)
-		{
+
+		if (myRequestTimeoutMs < 0) {
 			throw new Exception(String.format("%s cannot  be negative.  Got %s ", propNameRequestTimeoutMs, myRequestTimeoutMs));
 		}
-		
-		LOG.info("{} = {}", propNameRequestTimeoutMs, myRequestTimeoutMs);		
-		return myRequestTimeoutMs;		
+
+		LOG.info("{} = {}", propNameRequestTimeoutMs, myRequestTimeoutMs);
+		return myRequestTimeoutMs;
 	}
-	
-	private Integer parseMessageSendMaxRetries(String propName, String defaultValue) throws Exception
-	{
-		String propNameSendMaxRetries = getTopicAwarePropName(propName);		
+
+	private Integer parseMessageSendMaxRetries(String propName, String defaultValue) throws Exception {
+		String propNameSendMaxRetries = getTopicAwarePropName(propName);
 		Integer myMessageSendMaxRetries = Integer.parseInt(props.getProperty(propNameSendMaxRetries, defaultValue));
-		
-		if (myMessageSendMaxRetries < 0)
-		{
+
+		if (myMessageSendMaxRetries < 0) {
 			throw new Exception(String.format("%s cannot be negative.  Got %s", propNameSendMaxRetries, myMessageSendMaxRetries));
 		}
-		
+
 		LOG.info("{} = {}", propNameSendMaxRetries, myMessageSendMaxRetries);
 		return myMessageSendMaxRetries;
 	}
-	
-	private Integer parseRetryBackoffMs(String propName, String defaultValue) throws Exception
-	{
-		String propNameRetryBackoffMs = getTopicAwarePropName(propName);		
+
+	private Integer parseRetryBackoffMs(String propName, String defaultValue) throws Exception {
+		String propNameRetryBackoffMs = getTopicAwarePropName(propName);
 		Integer myRetryBackoffMs = Integer.parseInt(props.getProperty(propNameRetryBackoffMs, defaultValue));
-		
-		if (myRetryBackoffMs < 0)
-		{
+
+		if (myRetryBackoffMs < 0) {
 			throw new Exception(String.format("%s  cannot be negative.  Got  %s", propNameRetryBackoffMs, myRetryBackoffMs));
 		}
-		
-		LOG.info("{} = {}", propNameRetryBackoffMs, myRetryBackoffMs);		
+
+		LOG.info("{} = {}", propNameRetryBackoffMs, myRetryBackoffMs);
 		return myRetryBackoffMs;
 	}
-	
-	private Long parseTopicMetadataRefreshIntervalMs(String propName, String defaultValue) throws Exception
-	{
-		String propNameTopicMetadataRefreshIntervalMs = getTopicAwarePropName(propName);		
-		Long myTopicMetadataRefreshIntervalMs = Long.parseLong(props.getProperty(propNameTopicMetadataRefreshIntervalMs, defaultValue));		
-		LOG.info("{} = {}", propNameTopicMetadataRefreshIntervalMs, myTopicMetadataRefreshIntervalMs);		
+
+	private Long parseTopicMetadataRefreshIntervalMs(String propName, String defaultValue) throws Exception {
+		String propNameTopicMetadataRefreshIntervalMs = getTopicAwarePropName(propName);
+		Long myTopicMetadataRefreshIntervalMs = Long.parseLong(props.getProperty(propNameTopicMetadataRefreshIntervalMs, defaultValue));
+		LOG.info("{} = {}", propNameTopicMetadataRefreshIntervalMs, myTopicMetadataRefreshIntervalMs);
 		return myTopicMetadataRefreshIntervalMs;
 	}
-	
-	private int parsePartitionsRotate(String propName, String defaultValue) throws Exception
-	{
+
+	private int parsePartitionsRotate(String propName, String defaultValue) throws Exception {
 		String propNamePartitionsRotate = getTopicAwarePropName(propName);
-		
+
 		String myPartitionsRotateString = props.getProperty(propNamePartitionsRotate, defaultValue);
 		int myPartitionsRotate = 0;
-		
+
 		if (myPartitionsRotateString.compareToIgnoreCase("false") == 0) {
 			myPartitionsRotate = 0;
-		}	else if (myPartitionsRotateString.compareToIgnoreCase("true") == 0) {
-			myPartitionsRotate = 1;
-		}else if (myPartitionsRotateString.compareToIgnoreCase("random") == 0) {
-			myPartitionsRotate = 2;
 		} else {
-			throw new Exception(String.format("%s must be one of false, true, random.  Got %s", propNamePartitionsRotate, myPartitionsRotateString));
+			if (myPartitionsRotateString.compareToIgnoreCase("true") == 0) {
+				myPartitionsRotate = 1;
+			} else {
+				if (myPartitionsRotateString.compareToIgnoreCase("random") == 0) {
+					myPartitionsRotate = 2;
+				} else {
+					throw new Exception(String.format("%s must be one of false, true, random.  Got %s", propNamePartitionsRotate, myPartitionsRotateString));
+				}
+			}
 		}
-				
-		LOG.info("{} = {}", propNamePartitionsRotate, myPartitionsRotateString);		
+
+		LOG.info("{} = {}", propNamePartitionsRotate, myPartitionsRotateString);
 		return myPartitionsRotate;
 	}
-	
-	private int parseSenderThreads(String propName, String defaultValue) throws Exception
-	{
-		String propNameTopicSenderThreads = getTopicAwarePropName(propName);		
-		Integer myTopicSenderThreads = Integer.parseInt(props.getProperty(propNameTopicSenderThreads, defaultValue));		
-		LOG.info("{} = {}", propNameTopicSenderThreads, myTopicSenderThreads);		
+
+	private int parseSenderThreads(String propName, String defaultValue) throws Exception {
+		String propNameTopicSenderThreads = getTopicAwarePropName(propName);
+		Integer myTopicSenderThreads = Integer.parseInt(props.getProperty(propNameTopicSenderThreads, defaultValue));
+		LOG.info("{} = {}", propNameTopicSenderThreads, myTopicSenderThreads);
 		return myTopicSenderThreads;
 	}
-	
+
 	private void parseAndSetBuffers(
-		 String sharedBuffersPropName,  
+		 String sharedBuffersPropName,
 		 String sharedBuffersDefault,
 		 String defaultPropNameBufferSize,
 		 String defaultBufferSize,
 		 String defaultPropNameNumBuffers,
-		 String defaultNumBuffers) throws Exception
-	{
+		 String defaultNumBuffers) throws Exception {
 		/**
 		 *
 		 * The Buffers Story:
 		 *
-		 * We may be using shared buffers HOWEVER a topic can specify it's own num.buffers 
-		 * and message.buffer.size and it's buffers become ently private.  If that's the case 
-		 * then we need to force useSharedBuffers=false and the remaining topic aware 
+		 * We may be using shared buffers HOWEVER a topic can specify it's own num.buffers
+		 * and message.buffer.size and it's buffers become ently private.  If that's the case
+		 * then we need to force useSharedBuffers=false and the remaining topic aware
 		 * property naming does the rest.  In theory, it's brilliant.  In reality we'll see...
-		 * 
+		 *
 		 */
-		
+
 		useSharedBuffers = Boolean.parseBoolean(props.getProperty(sharedBuffersPropName, sharedBuffersDefault).trim());
-		
+
 		LOG.info("The global/non-topic aware property {}  = {}", sharedBuffersPropName, useSharedBuffers);
-		
+
 		String propNameBufferSize = getTopicAwarePropName(defaultPropNameBufferSize);
 		String propNameNumBuffers = getTopicAwarePropName(defaultPropNameNumBuffers);
-		
-		 /** 
-		  * Ensure both number of buffers and buffer size are either default property names
-		  * or have topic specific properties defined.  You can't overwrite one as topic specific 
-		  * without overwriting the other.
-		  */
-		
-		if (propNameBufferSize.equals(defaultPropNameBufferSize) ^ propNameNumBuffers.equals(defaultPropNameNumBuffers))
-		{
-			throw new Exception(String.format("%s and %s specified, cannot mix topic specific and global properties", 
+
+		/**
+		 * Ensure both number of buffers and buffer size are either default property names
+		 * or have topic specific properties defined.  You can't overwrite one as topic specific
+		 * without overwriting the other.
+		 */
+		if (propNameBufferSize.equals(defaultPropNameBufferSize) ^ propNameNumBuffers.equals(defaultPropNameNumBuffers)) {
+			throw new Exception(String.format("%s and %s specified, cannot mix topic specific and global properties",
 				 propNameBufferSize, propNameNumBuffers));
 		}
-		
-		if (false == (propNameNumBuffers.equals(defaultPropNameNumBuffers) && propNameBufferSize.equals(defaultPropNameBufferSize)))
-		{
+
+		if (false == (propNameNumBuffers.equals(defaultPropNameNumBuffers) && propNameBufferSize.equals(defaultPropNameBufferSize))) {
 			useSharedBuffers = false;
-			LOG.warn("{} = {}, and {} = {}",  propNameBufferSize, defaultPropNameBufferSize, propNameNumBuffers, defaultPropNameNumBuffers);			
+			LOG.warn("{} = {}, and {} = {}", propNameBufferSize, defaultPropNameBufferSize, propNameNumBuffers, defaultPropNameNumBuffers);
 			LOG.warn("{} forcing inherently private buffers as topic specific configuration exists", getTopicName());
 		}
-		
+
 		messageBufferSize = Integer.parseInt(props.getProperty(propNameBufferSize, defaultBufferSize));
-		
-		if (messageBufferSize < 1)
-		{
+
+		if (messageBufferSize < 1) {
 			throw new Exception(String.format("%s must be greater than 0.  Got %s", propNameBufferSize, messageBufferSize));
 		}
-		
+
 		LOG.info("{} = {}", propNameBufferSize, messageBufferSize);
 
 		numBuffers = Integer.parseInt(props.getProperty(propNameNumBuffers, defaultNumBuffers));
-		
-		if (numBuffers < 2)
-		{
-			throw new Exception(String.format("%s must be at least 2.  Got %s",  propNameNumBuffers, numBuffers));
+
+		if (numBuffers < 2) {
+			throw new Exception(String.format("%s must be at least 2.  Got %s", propNameNumBuffers, numBuffers));
 		}
-		
-		LOG.info("{} = {}", propNameNumBuffers, numBuffers);	
+
+		LOG.info("{} = {}", propNameNumBuffers, numBuffers);
 	}
-	
-	private Integer parseSendBufferSize(String propName, String defaultValue) throws Exception
-	{
+
+	private Integer parseSendBufferSize(String propName, String defaultValue) throws Exception {
 		String propNameSendBufferSize = getTopicAwarePropName(propName);
 		Integer mySendBufferSize = Integer.parseInt(props.getProperty(propNameSendBufferSize, defaultValue));
-		
-		if (mySendBufferSize < 1)
-		{
+
+		if (mySendBufferSize < 1) {
 			throw new Exception(String.format("%s must be greater than 0.  Got %s", propNameSendBufferSize, mySendBufferSize));
 		}
-		
-		LOG.info("{} = {}", propNameSendBufferSize, mySendBufferSize);		
+
+		LOG.info("{} = {}", propNameSendBufferSize, mySendBufferSize);
 		return mySendBufferSize;
 	}
-	
-	private String parseCompressionCodec(String propName, String defaultValue) throws Exception
-	{
-		String propNameRawCompressionCodec = getTopicAwarePropName(propName);		
-		String rawCompressionCodec = props.getProperty(propNameRawCompressionCodec, defaultValue);		
+
+	private String parseCompressionCodec(String propName, String defaultValue) throws Exception {
+		String propNameRawCompressionCodec = getTopicAwarePropName(propName);
+		String rawCompressionCodec = props.getProperty(propNameRawCompressionCodec, defaultValue);
 		String myCompressionCodec = rawCompressionCodec.toLowerCase();
-		
-		if (myCompressionCodec.equals("none") == false 
+
+		if (myCompressionCodec.equals("none") == false
 			 && myCompressionCodec.equals("gzip") == false
-			 && myCompressionCodec.equals("snappy") == false)
-		{
+			 && myCompressionCodec.equals("snappy") == false) {
 			throw new Exception(String.format("%s must be one of none, gzip or snappy.  Got  %s", propNameRawCompressionCodec, myCompressionCodec));
 		}
-		
-		LOG.info("{} = {}", propNameRawCompressionCodec, myCompressionCodec);		
-		return myCompressionCodec;		
+
+		LOG.info("{} = {}", propNameRawCompressionCodec, myCompressionCodec);
+		return myCompressionCodec;
 	}
-	
-	private Integer parsecCmpressionLevel(String propName, String defaultValue) throws Exception
-	{
-		String propNameCompressionLevel = getTopicAwarePropName(propName);		
+
+	private Integer parsecCmpressionLevel(String propName, String defaultValue) throws Exception {
+		String propNameCompressionLevel = getTopicAwarePropName(propName);
 		Integer myCompressionLevel = Integer.parseInt(props.getProperty(propNameCompressionLevel, defaultValue));
-		
-		if (myCompressionLevel < -1 || myCompressionLevel > 9)
-		{
+
+		if (myCompressionLevel < -1 || myCompressionLevel > 9) {
 			throw new Exception(String.format("%s must be -1 (default), 0 (no compression) or in the range 1-9.  Got %s", propNameCompressionLevel, myCompressionLevel));
 		}
-		
-		LOG.info("{} = {}", propNameCompressionLevel, myCompressionLevel);		
+
+		LOG.info("{} = {}", propNameCompressionLevel, myCompressionLevel);
 		return myCompressionLevel;
 	}
 
-	private Long parseQueueEnqueueTimeoutMs(String propName, String defaultValue) throws Exception
-	{
-		String propNameQueueEnqueueTimeoutMs = getTopicAwarePropName(propName);		
+	private Long parseQueueEnqueueTimeoutMs(String propName, String defaultValue) throws Exception {
+		String propNameQueueEnqueueTimeoutMs = getTopicAwarePropName(propName);
 		Long myQueueEnqueueTimeoutMs = Long.parseLong(props.getProperty(propNameQueueEnqueueTimeoutMs, defaultValue));
-		
-		if (myQueueEnqueueTimeoutMs != -1 && myQueueEnqueueTimeoutMs < 0)
-		{
+
+		if (myQueueEnqueueTimeoutMs != -1 && myQueueEnqueueTimeoutMs < 0) {
 			throw new Exception(String.format("%s must either be -1 or a non-negative.  Got %s", propNameQueueEnqueueTimeoutMs, myQueueEnqueueTimeoutMs));
 		}
-		
-		LOG.info("{} = {}", propNameQueueEnqueueTimeoutMs, myQueueEnqueueTimeoutMs);		
+
+		LOG.info("{} = {}", propNameQueueEnqueueTimeoutMs, myQueueEnqueueTimeoutMs);
 		return myQueueEnqueueTimeoutMs;
-	}	
+	}
 
 	/**
 	 *
 	 * @return the metadata broker list
 	 */
-	public List<String> getMetadataBrokerList()
-	{
+	public List<String> getMetadataBrokerList() {
 		return metadataBrokerList;
 	}
 
@@ -523,8 +487,7 @@ public class ProducerConfiguration
 	 *
 	 * @param metadataBrokerList the metadata broker list
 	 */
-	public void setMetadataBrokerList(List<String> metadataBrokerList)
-	{
+	public void setMetadataBrokerList(List<String> metadataBrokerList) {
 		this.metadataBrokerList = metadataBrokerList;
 	}
 
@@ -532,8 +495,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the queue  buffering max milliseconds
 	 */
-	public long getQueueBufferingMaxMs()
-	{
+	public long getQueueBufferingMaxMs() {
 		return queueBufferingMaxMs;
 	}
 
@@ -541,8 +503,7 @@ public class ProducerConfiguration
 	 *
 	 * @param queueBufferingMaxMs the queue  buffering max milliseconds
 	 */
-	public void setQueueBufferingMaxMs(long queueBufferingMaxMs)
-	{
+	public void setQueueBufferingMaxMs(long queueBufferingMaxMs) {
 		this.queueBufferingMaxMs = queueBufferingMaxMs;
 	}
 
@@ -550,8 +511,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the request required acks
 	 */
-	public short getRequestRequiredAcks()
-	{
+	public short getRequestRequiredAcks() {
 		return requestRequiredAcks;
 	}
 
@@ -559,8 +519,7 @@ public class ProducerConfiguration
 	 *
 	 * @param requestRequiredAcks the request required acks
 	 */
-	public void setRequestRequiredAcks(short requestRequiredAcks)
-	{
+	public void setRequestRequiredAcks(short requestRequiredAcks) {
 		this.requestRequiredAcks = requestRequiredAcks;
 	}
 
@@ -568,8 +527,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the request timeout milliseconds
 	 */
-	public int getRequestTimeoutMs()
-	{
+	public int getRequestTimeoutMs() {
 		return requestTimeoutMs;
 	}
 
@@ -577,8 +535,7 @@ public class ProducerConfiguration
 	 *
 	 * @param requestTimeoutMs the request timeout milliseconds
 	 */
-	public void setRequestTimeoutMs(int requestTimeoutMs)
-	{
+	public void setRequestTimeoutMs(int requestTimeoutMs) {
 		this.requestTimeoutMs = requestTimeoutMs;
 	}
 
@@ -586,8 +543,7 @@ public class ProducerConfiguration
 	 *
 	 * @return message send max retries
 	 */
-	public int getMessageSendMaxRetries()
-	{
+	public int getMessageSendMaxRetries() {
 		return messageSendMaxRetries;
 	}
 
@@ -595,8 +551,7 @@ public class ProducerConfiguration
 	 *
 	 * @param messageSendMaxRetries message send max retries
 	 */
-	public void setMessageSendMaxRetries(int messageSendMaxRetries)
-	{
+	public void setMessageSendMaxRetries(int messageSendMaxRetries) {
 		this.messageSendMaxRetries = messageSendMaxRetries;
 	}
 
@@ -604,26 +559,23 @@ public class ProducerConfiguration
 	 *
 	 * @return the number of threads sending to the broker
 	 */
-	public int getSenderThreads()
-	{
+	public int getSenderThreads() {
 		return senderThreads;
 	}
-	
+
 	/**
 	 *
 	 * @param senderThreads the number of threads sending to the broker
 	 */
-	public void setSenderThreads (int senderThreads)
-	{
+	public void setSenderThreads(int senderThreads) {
 		this.senderThreads = senderThreads;
 	}
-	
+
 	/**
 	 *
 	 * @return milliseconds to back off for when retrying
 	 */
-	public int getRetryBackoffMs()
-	{
+	public int getRetryBackoffMs() {
 		return retryBackoffMs;
 	}
 
@@ -631,8 +583,7 @@ public class ProducerConfiguration
 	 *
 	 * @param retryBackoffMs milliseconds to back off for when retrying
 	 */
-	public void setRetryBackoffMs(int retryBackoffMs)
-	{
+	public void setRetryBackoffMs(int retryBackoffMs) {
 		this.retryBackoffMs = retryBackoffMs;
 	}
 
@@ -640,8 +591,7 @@ public class ProducerConfiguration
 	 *
 	 * @return message buffer size
 	 */
-	public int getMessageBufferSize()
-	{
+	public int getMessageBufferSize() {
 		return messageBufferSize;
 	}
 
@@ -649,8 +599,7 @@ public class ProducerConfiguration
 	 *
 	 * @param messageBufferSize message buffer size
 	 */
-	public void setMessageBufferSize(int messageBufferSize)
-	{
+	public void setMessageBufferSize(int messageBufferSize) {
 		this.messageBufferSize = messageBufferSize;
 	}
 
@@ -658,8 +607,7 @@ public class ProducerConfiguration
 	 *
 	 * @return are shared buffers being used?
 	 */
-	public boolean isUseSharedBuffers()
-	{
+	public boolean isUseSharedBuffers() {
 		return useSharedBuffers;
 	}
 
@@ -667,8 +615,7 @@ public class ProducerConfiguration
 	 *
 	 * @param useSharedBuffers the shared buffer use
 	 */
-	public void setUseSharedBuffers(boolean useSharedBuffers)
-	{
+	public void setUseSharedBuffers(boolean useSharedBuffers) {
 		this.useSharedBuffers = useSharedBuffers;
 	}
 
@@ -676,8 +623,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the number of buffers
 	 */
-	public int getNumBuffers()
-	{
+	public int getNumBuffers() {
 		return numBuffers;
 	}
 
@@ -685,8 +631,7 @@ public class ProducerConfiguration
 	 *
 	 * @param numBuffers the number of buffers
 	 */
-	public void setNumBuffers(int numBuffers)
-	{
+	public void setNumBuffers(int numBuffers) {
 		this.numBuffers = numBuffers;
 	}
 
@@ -694,8 +639,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the send buffer size
 	 */
-	public int getSendBufferSize()
-	{
+	public int getSendBufferSize() {
 		return sendBufferSize;
 	}
 
@@ -703,8 +647,7 @@ public class ProducerConfiguration
 	 *
 	 * @param sendBufferSize the send buffer size
 	 */
-	public void setSendBufferSize(int sendBufferSize)
-	{
+	public void setSendBufferSize(int sendBufferSize) {
 		this.sendBufferSize = sendBufferSize;
 	}
 
@@ -712,8 +655,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the compression codec used
 	 */
-	public String getCompressionCodec()
-	{
+	public String getCompressionCodec() {
 		return compressionCodec;
 	}
 
@@ -721,8 +663,7 @@ public class ProducerConfiguration
 	 *
 	 * @param compressionCodec the compression codec used
 	 */
-	public void setCompressionCodec(String compressionCodec)
-	{
+	public void setCompressionCodec(String compressionCodec) {
 		this.compressionCodec = compressionCodec;
 	}
 
@@ -730,8 +671,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the compression level
 	 */
-	public int getCompressionLevel()
-	{
+	public int getCompressionLevel() {
 		return compressionLevel;
 	}
 
@@ -739,8 +679,7 @@ public class ProducerConfiguration
 	 *
 	 * @param compressionLevel the compression level
 	 */
-	public void setCompressionLevel(int compressionLevel)
-	{
+	public void setCompressionLevel(int compressionLevel) {
 		this.compressionLevel = compressionLevel;
 	}
 
@@ -748,8 +687,7 @@ public class ProducerConfiguration
 	 *
 	 * @return the topic metadata refresh interval in milliseconds
 	 */
-	public long getTopicMetadataRefreshIntervalMs()
-	{
+	public long getTopicMetadataRefreshIntervalMs() {
 		return topicMetadataRefreshIntervalMs;
 	}
 
@@ -757,8 +695,7 @@ public class ProducerConfiguration
 	 *
 	 * @param topicMetadataRefreshIntervalMs the topic metadata refresh interval in milliseconds
 	 */
-	public void setTopicMetadataRefreshIntervalMs(long topicMetadataRefreshIntervalMs)
-	{
+	public void setTopicMetadataRefreshIntervalMs(long topicMetadataRefreshIntervalMs) {
 		this.topicMetadataRefreshIntervalMs = topicMetadataRefreshIntervalMs;
 	}
 
@@ -769,7 +706,7 @@ public class ProducerConfiguration
 	public int getPartitionsRotate() {
 		return partitionsRotate;
 	}
-	
+
 	/**
 	 *
 	 * @param the type of partitions rotation to use
@@ -777,13 +714,12 @@ public class ProducerConfiguration
 	public void setPartitionsRotate(int partitionsRotate) {
 		this.partitionsRotate = partitionsRotate;
 	}
-	
+
 	/**
 	 *
 	 * @return the queue enqueue timeout milliseconds
 	 */
-	public long getQueueEnqueueTimeoutMs()
-	{
+	public long getQueueEnqueueTimeoutMs() {
 		return queueEnqueueTimeoutMs;
 	}
 
@@ -791,32 +727,28 @@ public class ProducerConfiguration
 	 *
 	 * @param queueEnqueueTimeoutMs the queue enqueue timeout milliseconds
 	 */
-	public void setQueueEnqueueTimeoutMs(long queueEnqueueTimeoutMs)
-	{
+	public void setQueueEnqueueTimeoutMs(long queueEnqueueTimeoutMs) {
 		this.queueEnqueueTimeoutMs = queueEnqueueTimeoutMs;
 	}
 
 	/**
 	 * @return the topicName
 	 */
-	public String getTopicName()
-	{
+	public String getTopicName() {
 		return topicName;
 	}
 
 	/**
 	 * @param topicName the topicName to set
 	 */
-	public void setTopicName(String topicName)
-	{
+	public void setTopicName(String topicName) {
 		this.topicName = topicName;
 	}
 
 	/**
 	 * @return the retryBackoffExponent
 	 */
-	public int getRetryBackoffExponent()
-	{
+	public int getRetryBackoffExponent() {
 		return retryBackoffExponent;
 	}
 
