@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.producer;
 
 import java.nio.ByteBuffer;
@@ -22,66 +21,67 @@ import java.nio.ByteBuffer;
  * Buffer to hold data that is to be sent to Kafka.
  */
 public class MessageSetBuffer {
-  private int size;
-  private byte[] bytes;
-  private ByteBuffer buffer;
-  private int batchSize = 0;
-  private Producer producer;
 
-  public MessageSetBuffer(Producer producer, int size) {
-    this.producer = producer;
-    this.size = size;
-    bytes = new byte[this.size];
-    buffer = ByteBuffer.wrap(bytes);
-  }
+	private int size;
+	private byte[] bytes;
+	private ByteBuffer buffer;
+	private int batchSize = 0;
+	private Producer producer;
 
-  public void clear() {
-    batchSize = 0;
-    buffer.clear();
-  }
+	public MessageSetBuffer(Producer producer, int size) {
+		this.producer = producer;
+		this.size = size;
+		bytes = new byte[this.size];
+		buffer = ByteBuffer.wrap(bytes);
+	}
 
-  public int getSize() {
-    return size;
-  }
+	public void clear() {
+		batchSize = 0;
+		buffer.clear();
+	}
 
-  public void setSize(int size) {
-    this.size = size;
-  }
+	public int getSize() {
+		return size;
+	}
 
-  public byte[] getBytes() {
-    return bytes;
-  }
+	public void setSize(int size) {
+		this.size = size;
+	}
 
-  public void setBytes(byte[] bytes) {
-    this.bytes = bytes;
-  }
+	public byte[] getBytes() {
+		return bytes;
+	}
 
-  public ByteBuffer getBuffer() {
-    return buffer;
-  }
+	public void setBytes(byte[] bytes) {
+		this.bytes = bytes;
+	}
 
-  public void setBuffer(ByteBuffer buffer) {
-    this.buffer = buffer;
-  }
+	public ByteBuffer getBuffer() {
+		return buffer;
+	}
 
-  public int getBatchSize() {
-    return batchSize;
-  }
+	public void setBuffer(ByteBuffer buffer) {
+		this.buffer = buffer;
+	}
 
-  public void setBatchSize(int batchSize) {
-    this.batchSize = batchSize;
-  }
+	public int getBatchSize() {
+		return batchSize;
+	}
 
-  public Producer getProducer() {
-    return producer;
-  }
+	public void setBatchSize(int batchSize) {
+		this.batchSize = batchSize;
+	}
 
-  public void setProducer(Producer producer) {
-    this.producer = producer;
-  }
+	public Producer getProducer() {
+		return producer;
+	}
 
-  public void incrementBatchSize() {
-    batchSize++;
-  }
+	public void setProducer(Producer producer) {
+		this.producer = producer;
+	}
+
+	public void incrementBatchSize() {
+		batchSize++;
+	}
 
 }

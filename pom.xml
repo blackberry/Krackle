@@ -19,11 +19,11 @@ limitations under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.blackberry.bdp.krackle</groupId>
-	<artifactId>krackle-dev</artifactId>
-	<version>0.8.1.2</version>
+	<artifactId>krackle</artifactId>
+	<version>0.8.2</version>
 	<packaging>jar</packaging>
 
-	<name>krackle-dev</name>
+	<name>krackle-0.8.2</name>
 	<url>http://blackberry.com</url>
 
 	<properties>
@@ -37,17 +37,17 @@ limitations under the License.
 	</scm>
 
 	<dependencies>
-		
+
 		<dependency>
 			<groupId>org.xerial.snappy</groupId>
 			<artifactId>snappy-java</artifactId>
 			<version>1.1.1.7</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.blackberry.bdp.common</groupId>
 			<artifactId>bdp-common</artifactId>
-			<version>0.0.9</version>
+			<version>0.5.2</version>
 		</dependency>
 
 		<!-- Testing dependencies -->
@@ -63,17 +63,17 @@ limitations under the License.
 			<version>0.8.1.1</version>
 			<scope>test</scope>
 			<exclusions>
-				<exclusion>					
+				<exclusion>
 					<groupId>org.slf4j</groupId>
 					<artifactId>slf4j-simple</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>javax.jms</groupId>
-					<artifactId>jms</artifactId>					
+					<artifactId>jms</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>com.sun.jmx</groupId>
-					<artifactId>jmxri</artifactId>					
+					<artifactId>jmxri</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>com.sun.jdmk</groupId>
@@ -91,7 +91,7 @@ limitations under the License.
 
 	<build>
 		<plugins>
-			
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -101,7 +101,7 @@ limitations under the License.
 					<target>1.7</target>
 				</configuration>
 			</plugin>
-			
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
@@ -115,7 +115,7 @@ limitations under the License.
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- Copy the dependencies -->
 			<plugin>
 				<artifactId>maven-dependency-plugin</artifactId>
@@ -131,7 +131,7 @@ limitations under the License.
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- Generate a build number based off the commit hash -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -147,10 +147,10 @@ limitations under the License.
 				</executions>
 				<configuration>
 					<doCheck>false</doCheck>
-					<doUpdate>false</doUpdate>		
-				</configuration>					
+					<doUpdate>false</doUpdate>
+				</configuration>
 			</plugin>
-			
+
 			<!-- Insert the build branch and commit hash into the manifest -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -168,7 +168,7 @@ limitations under the License.
 					</archive>
 				</configuration>
 			</plugin>
-			
+
 		</plugins>
 	</build>
 </project>

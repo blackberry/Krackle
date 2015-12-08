@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.blackberry.bdp.krackle.producer;
 
 /**
  *
  * @author dariens
  */
-public class MissingPartitionsException extends Exception
-{
+public class MissingPartitionsException extends Exception {
 
 	/**
 	 * @param error
 	 * @param e
 	 */
-	public MissingPartitionsException(String error, Exception e)
-	{
+	public MissingPartitionsException(String error, Exception e) {
 		super(error, e);
 	}
-	
+
 }
