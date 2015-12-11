@@ -17,6 +17,7 @@ package com.blackberry.bdp.krackle.meta;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -93,13 +94,19 @@ public class MetaData {
 		List<HostAndPort> seedBrokers = new ArrayList<HostAndPort>();
 		for (String hnp : metadataBrokerList) {
 			String[] hostPort = hnp.split(":", 2);
-			seedBrokers.add(new HostAndPort(hostPort[0], Integer
-				 .parseInt(hostPort[1])));
+			try {
+				for(InetAddress curhost: InetAddress.getAllByName(hostPort[0])) {
+					seedBrokers.add(new HostAndPort(curhost, Integer.parseInt(hostPort[1])));
+					LOG.debug("Adding Broker Candidate - {}", curhost);
+				}
+			} catch (UnknownHostException e) {
+				LOG.info("Unknown Host: {}", hostPort[0]);
+			}
 		}
 
 		// Try each seed broker in a random order
 		Collections.shuffle(seedBrokers);
-
+		
 		Socket sock = null;
 		for (HostAndPort hnp : seedBrokers) {
 			try {
@@ -247,17 +254,17 @@ public class MetaData {
 	// change properly.
 	private static class HostAndPort {
 
-		String host;
+		InetAddress host;
 		int port;
 
-		HostAndPort(String host, int port) {
+		HostAndPort(InetAddress host, int port) {
 			this.host = host;
 			this.port = port;
 		}
 
 		@Override
 		public String toString() {
-			return "HostAndPort [host=" + host + ", port=" + port + "]";
+			return "HostAndPort [host=" + host.getHostName() + ", port=" + port + "]";
 		}
 
 	}
