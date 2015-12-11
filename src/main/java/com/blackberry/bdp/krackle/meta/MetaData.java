@@ -97,7 +97,7 @@ public class MetaData {
 			try {
 				for(InetAddress curhost: InetAddress.getAllByName(hostPort[0])) {
 					seedBrokers.add(new HostAndPort(curhost, Integer.parseInt(hostPort[1])));
-					LOG.debug("Adding Broker Candidate - Host: {}, IP: {}", hostPort[0],curhost);
+					LOG.debug("Adding Broker Candidate - {}", curhost);
 				}
 			} catch (UnknownHostException e) {
 				LOG.info("Unknown Host: {}", hostPort[0]);
