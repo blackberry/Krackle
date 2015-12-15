@@ -98,7 +98,6 @@ public class ConsumerConfiguration {
 	private int socketTimeoutMs;
 
 	// Security properties and objects
-	private LoginContext loginContext;
 	private HashMap<String, Object> securityConfigs;
 	private String kafkaServicePrincipal;
 	private String securityProtocolString;

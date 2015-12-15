@@ -235,10 +235,9 @@ public class ProducerConfiguration {
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
 
-
+		securityProtocolString = props.getProperty("kafka.security.protocol").trim().toUpperCase();
 		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
-
-		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name.", "kafkaClient").trim();
+		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name");
 	}
 
 	/**
@@ -814,6 +813,13 @@ public class ProducerConfiguration {
 	 */
 	public AuthenticatedSocketBuilder getAuthSocketBuilder() {
 		return authSocketBuilder;
+	}
+
+	/**
+	 * @return the jaasLoginContextName
+	 */
+	public String getJaasLoginContextName() {
+		return jaasLoginContextName;
 	}
 
 }
