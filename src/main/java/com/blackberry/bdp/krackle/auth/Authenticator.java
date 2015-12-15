@@ -20,10 +20,17 @@ import java.net.Socket;
 import java.util.Map;
 
 public interface Authenticator {
+
 	void configure(Map<String, ?> configs) throws InvalidConfigurationTypeException, MissingConfigurationException, Exception;
+
 	void authenticate() throws IOException;
+
 	boolean configured();
+
 	boolean complete();
+
 	Socket getSocket();
+
 	void close() throws IOException;
+
 }

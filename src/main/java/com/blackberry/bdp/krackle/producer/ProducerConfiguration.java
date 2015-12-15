@@ -1,18 +1,30 @@
 /**
- * Copyright 2014 BlackBerry, Limited.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.blackberry.bdp.krackle.producer;
 
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
+import com.blackberry.bdp.krackle.auth.AuthenticationException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.zip.Deflater;
+import javax.security.auth.login.LoginContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -182,15 +194,14 @@ public class ProducerConfiguration {
 	private int compressionLevel;
 	private boolean useSharedBuffers;
 
-	/**
-	 * Legacy global/shared constructor that isn't topic aware
-	 * @param props the properties object  to parse
-	 * @throws Exception
-	 */
-	@Deprecated
-	public ProducerConfiguration(Properties props) throws Exception {
-		this(props, null);
-	}
+	// Security properties and objects
+	private String securityProtocolString;
+	private HashMap<String, Object> securityConfigs;
+	private final String kafkaServicePrincipal;
+	private AuthenticatedSocketBuilder.Protocol kafkaSecurityProtocol;
+	private final String jaasLoginContextName;
+	private AuthenticatedSocketBuilder authSocketBuilder;
+
 
 	/**
 	 * ProducerConfiguration class that supports parsing properties that all support
@@ -199,7 +210,8 @@ public class ProducerConfiguration {
 	 * @param topicName the topic being configured
 	 * @throws Exception
 	 */
-	public ProducerConfiguration(Properties props, String topicName) throws Exception {
+	public ProducerConfiguration(Properties props,
+		 String topicName) throws Exception {
 		this.props = props;
 		this.topicName = topicName;
 
@@ -222,6 +234,51 @@ public class ProducerConfiguration {
 
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
+
+
+		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
+
+		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name.", "kafkaClient").trim();
+	}
+
+	/**
+	 * Security Protocols that Do Not Require a JAAS LoginContext
+	 @throws AuthenticationException
+	 */
+	public void configureSecurity() throws AuthenticationException {
+		securityConfigs = new HashMap<>();
+		switch (securityProtocolString) {
+			case "PLAINTEXT":
+				kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.PLAINTEXT;
+				break;
+			default:
+				throw new AuthenticationException(String.format(
+					 "kafka.security.protocol=%s not recognized",
+					 securityProtocolString));
+		}
+		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
+	}
+
+	/**
+	 * Security Protocols that Require a JAAS LoginContext
+	 @param loginContext
+ 	 @throws AuthenticationException
+	 */
+	public void configureSecurity(LoginContext loginContext) throws AuthenticationException {
+		securityConfigs = new HashMap<>();
+		switch (securityProtocolString) {
+			case "SASL_PLAINTEXT":
+				kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.SASL_PLAINTEXT;
+				securityConfigs.put("subject", loginContext.getSubject());
+				securityConfigs.put("servicePrincipal", kafkaServicePrincipal);
+				break;
+			case "SASL_SSL":
+				kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.SASL_SSL;
+				break;
+			default:
+				throw new AuthenticationException("kafka.security.protocol.service.principal not recognized");
+		}
+		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
 	}
 
 	/**
@@ -750,6 +807,13 @@ public class ProducerConfiguration {
 	 */
 	public int getRetryBackoffExponent() {
 		return retryBackoffExponent;
+	}
+
+	/**
+	 * @return the authSocketBuilder
+	 */
+	public AuthenticatedSocketBuilder getAuthSocketBuilder() {
+		return authSocketBuilder;
 	}
 
 }

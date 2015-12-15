@@ -58,7 +58,7 @@ public class KafkaClientTest {
 		zk = new LocalZkServer();
 		kafkaServer = new LocalKafkaServer();
 
-		logs = new ArrayList<String>();
+		logs = new ArrayList<>();
 		for (int i = 0; i < 100000; i++) {
 			logs.add("This is a test log line.  Number " + i);
 		}
@@ -78,11 +78,13 @@ public class KafkaClientTest {
 		Properties producerProps = new Properties();
 		producerProps.setProperty("metadata.broker.list", "localhost:9876");
 		ProducerConfiguration producerConf = new ProducerConfiguration(
-			 producerProps);
+			 producerProps, topic);
+		producerConf.configureSecurity();
 		while (true) {
 			MetaData meta;
 			try {
-				meta = MetaData.getMetaData(producerConf.getMetadataBrokerList(),
+				meta = MetaData.getMetaData(producerConf.getAuthSocketBuilder(),
+					 producerConf.getMetadataBrokerList(),
 					 topic, "test");
 				meta.getTopic(topic).getPartition(0).getLeader();
 				break;
@@ -122,7 +124,7 @@ public class KafkaClientTest {
 		producerProps.setProperty("request.required.acks", "1");
 		producerProps.setProperty("num.buffers", "10");
 		ProducerConfiguration producerConf = new ProducerConfiguration(
-			 producerProps);
+			 producerProps, topic);
 		Producer producer = new Producer(producerConf, "myclient", topic, "mykey",
 			 null);
 		return producer;

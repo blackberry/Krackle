@@ -98,10 +98,8 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 	}
 
 	@Override
-	public void configure(Map<String, ?> configs)
-		 throws MissingConfigurationException,
-		 InvalidConfigurationTypeException,
-		 SaslException {
+	public void configure(Map<String, ?> configs) throws
+		 MissingConfigurationException, InvalidConfigurationTypeException, SaslException {
 
 		if (!configs.containsKey("subject")) {
 			throw new MissingConfigurationException("`subject` not defined in configration");

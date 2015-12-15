@@ -23,7 +23,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.blackberry.bdp.krackle.Constants;
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
+import com.blackberry.bdp.krackle.auth.AuthenticationException;
 
 /**
  * Gather and store metadata for a topic.
@@ -48,42 +49,23 @@ public class MetaData {
 	private static final Logger LOG = LoggerFactory.getLogger(MetaData.class);
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 
-	private Map<Integer, Broker> brokers = new HashMap<Integer, Broker>();
-	private Map<String, Topic> topics = new HashMap<String, Topic>();
+	private final Map<Integer, Broker> brokers = new HashMap<>();
+	private final Map<String, Topic> topics = new HashMap<>();
 	private int correlationId;
-
-	/**
-	 * New instance, with the list of seed brokers represented as a comma
-	 * separated list of host:port entries.
-	 *
-	 * @param metadataBrokerListString
-	 *          comma separated list of host:port entries.
-	 * @param topicString
-	 *          topic to get metadata about.
-	 * @param clientIdString
-	 *          clientId to send with request.
-	 * @return a new MetaData object containing information on the topic.
-	 */
-	public static MetaData getMetaData(String metadataBrokerListString,
-		 String topicString, String clientIdString) {
-		List<String> metadataBrokerList = Arrays.asList(metadataBrokerListString
-			 .split(","));
-		return getMetaData(metadataBrokerList, topicString, clientIdString);
-	}
 
 	/**
 	 * New instance, with the list of seed brokers represented a List of host:port
 	 * entries.
 	 *
-	 * @param metadataBrokerListString
-	 *          comma separated list of host:port entries.
-	 * @param topicString
-	 *          topic to get metadata about.
-	 * @param clientIdString
-	 *          clientId to send with request.
+	 * @param authSocketBuilder
+	 * @param config
+	 * @param metadataBrokerList
+	 * @param topicString topic to get metadata about.
+	 * @param clientIdString clientId to send with request.
 	 * @return a new MetaData object containing information on the topic.
 	 */
-	public static MetaData getMetaData(List<String> metadataBrokerList,
+	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
+		 List<String> metadataBrokerList,
 		 String topicString, String clientIdString) {
 		LOG.info("Getting metadata for {}", topicString);
 
@@ -91,7 +73,7 @@ public class MetaData {
 		metadata.setCorrelationId((int) System.currentTimeMillis());
 
 		// Get the broker seeds from the config.
-		List<HostAndPort> seedBrokers = new ArrayList<HostAndPort>();
+		List<HostAndPort> seedBrokers = new ArrayList<>();
 		for (String hnp : metadataBrokerList) {
 			String[] hostPort = hnp.split(":", 2);
 			try {
@@ -106,14 +88,14 @@ public class MetaData {
 
 		// Try each seed broker in a random order
 		Collections.shuffle(seedBrokers);
-		
+
 		Socket sock = null;
 		for (HostAndPort hnp : seedBrokers) {
 			try {
-				sock = new Socket(hnp.host, hnp.port);
+				sock = authSocketBuilder.build(hnp.host, hnp.port);
 				sock.setSoTimeout(5000);
-			} catch (UnknownHostException e) {
-				LOG.warn("Unknown host: {}", hnp.host);
+			} catch (AuthenticationException  e) {
+				LOG.warn("authentication exception: {}", hnp.host);
 				continue;
 			} catch (IOException e) {
 				LOG.warn("Error connecting to {}:{}", hnp.host, hnp.port);
