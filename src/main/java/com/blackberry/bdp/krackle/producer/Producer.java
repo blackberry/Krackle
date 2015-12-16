@@ -532,7 +532,10 @@ public class Producer {
 			}
 			partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
 
-			LOG.info("Sending to partition {} of {}", partition, topic.getNumPartitions());
+			LOG.info("rotated onto partition {}-{} (from {} available partitions)",
+				 topic.getName(),
+				 partition,
+				 topic.getNumPartitions());
 
 			broker = metadata.getBroker(topic.getPartition(partition).getLeader());
 
@@ -553,7 +556,6 @@ public class Producer {
 
 				try {
 					socket = conf.getAuthSocketBuilder().build(broker.getHost(), broker.getPort());
-					socket = new Socket(broker.getHost(), broker.getPort());
 					socket.setSendBufferSize(conf.getSendBufferSize());
 					socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
 					LOG.info("Connected to {}", socket);

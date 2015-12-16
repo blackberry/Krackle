@@ -250,6 +250,11 @@ public class ProducerConfiguration {
 			case "PLAINTEXT":
 				kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.PLAINTEXT;
 				break;
+			case "SASL_PLAINTEXT":
+				throw new AuthenticationException(String.format(
+					 "kafka.security.protocol=%s requires a login context "
+						  + "specified by jaas.gssapi.login.context.name",
+					 securityProtocolString));
 			default:
 				throw new AuthenticationException(String.format(
 					 "kafka.security.protocol=%s not recognized",

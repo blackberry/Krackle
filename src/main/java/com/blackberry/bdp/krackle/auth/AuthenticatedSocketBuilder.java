@@ -27,9 +27,11 @@ import org.slf4j.LoggerFactory;
 public class AuthenticatedSocketBuilder {
 
 	public static enum Protocol {
+
 		PLAINTEXT,
 		SASL_PLAINTEXT,
 		SASL_SSL
+
 	}
 
 	private final Protocol protocol;
@@ -50,7 +52,12 @@ public class AuthenticatedSocketBuilder {
 			Socket socket = new Socket(host, port);
 			return build(socket);
 		} catch (IOException | AuthenticationException e) {
-			throw (AuthenticationException) e;
+			LOG.error("an {} exception occured {}: ",
+				 e.getClass().getCanonicalName(),
+				 e.getMessage(),
+				 e);
+			throw new AuthenticationException(
+				 String.format("failed to a authenticate %s", e.getMessage()));
 		}
 	}
 
@@ -60,7 +67,12 @@ public class AuthenticatedSocketBuilder {
 			Socket socket = new Socket(hostname, port);
 			return build(socket);
 		} catch (IOException | AuthenticationException e) {
-			throw (AuthenticationException) e;
+			LOG.error("an {} exception occured {}: ",
+				 e.getClass().getCanonicalName(),
+				 e.getMessage(),
+				 e);
+			throw new AuthenticationException(
+				 String.format("failed to a authenticate %s", e.getMessage()));
 		}
 	}
 
@@ -74,10 +86,12 @@ public class AuthenticatedSocketBuilder {
 				case SASL_PLAINTEXT:
 					SaslPlainTextAuthenticator spta
 						 = new SaslPlainTextAuthenticator(socket);
-					LOG.info("{}", socket.getInetAddress().getHostName());
+					LOG.debug("using remote hostname {}",
+						 socket.getInetAddress().getHostName());
 					configs.put("hostname", socket.getInetAddress().getHostName());
 					spta.configure(configs);
 					spta.authenticate();
+					LOG.info("sasl authenticated socket has been created");
 					return spta.getSocket();
 				default:
 					throw new AuthenticationException(
@@ -87,11 +101,14 @@ public class AuthenticatedSocketBuilder {
 			 | MissingConfigurationException
 			 | InvalidConfigurationTypeException
 			 | AuthenticationException e) {
-			LOG.info("an {} exception occured {}: ",
+			LOG.error("an {} exception occured {}: ",
 				 e.getClass().getCanonicalName(),
 				 e.getMessage(),
 				 e);
-			throw (AuthenticationException) e;
+			throw new AuthenticationException(
+				 String.format("failed to a authenticate %s", e.getMessage()));
+
 		}
 	}
+
 }
