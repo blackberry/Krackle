@@ -235,7 +235,7 @@ public class ProducerConfiguration {
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
 
-		securityProtocolString = props.getProperty("kafka.security.protocol").trim().toUpperCase();
+		securityProtocolString = props.getProperty("kafka.security.protocol", "PLAINTEXT").trim().toUpperCase();
 		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
 		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name");
 	}
@@ -271,6 +271,11 @@ public class ProducerConfiguration {
 	public void configureSecurity(LoginContext loginContext) throws AuthenticationException {
 		securityConfigs = new HashMap<>();
 		switch (securityProtocolString) {
+			case "PLAINTEXT":
+				throw new AuthenticationException(String.format(
+					 "kafka.security.protocol=%s cannot be configured with"
+						  + "a jaas.gssapi.login.context.name",
+					 securityProtocolString));
 			case "SASL_PLAINTEXT":
 				kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.SASL_PLAINTEXT;
 				securityConfigs.put("subject", loginContext.getSubject());

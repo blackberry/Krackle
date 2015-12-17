@@ -51,30 +51,65 @@ public class MetaData {
 
 	private final Map<Integer, Broker> brokers = new HashMap<>();
 	private final Map<String, Topic> topics = new HashMap<>();
+
 	private int correlationId;
+	private List<String> metadataBrokerList;
+	private byte[] clientId;
 
 	/**
-	 * New instance, with the list of seed brokers represented a List of host:port
-	 * entries.
+	 * Metadata for a single topic with a list of seed brokers for a given client
 	 *
 	 * @param authSocketBuilder
-	 * @param config
 	 * @param metadataBrokerList
-	 * @param topicString topic to get metadata about.
+	 * @param topic topic to get metadata about.
 	 * @param clientIdString clientId to send with request.
 	 * @return a new MetaData object containing information on the topic.
 	 */
 	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
 		 List<String> metadataBrokerList,
-		 String topicString, String clientIdString) {
-		LOG.info("Getting metadata for {}", topicString);
+		 String topic,
+		 String clientIdString) {
+		LOG.info("Getting metadata for {}", topic);
 
 		MetaData metadata = new MetaData();
-		metadata.setCorrelationId((int) System.currentTimeMillis());
+		metadata.metadataBrokerList = metadataBrokerList;
+		metadata.correlationId = (int) System.currentTimeMillis();
+		metadata.clientId = clientIdString.getBytes(UTF8);
+
+		return getMetaData(metadata,
+			 buildMetadataRequest(metadata, topic.getBytes(UTF8)),
+			 authSocketBuilder);
+	}
+
+	/**
+	 * Metadata for all topics with a list of seed brokers for a given client
+	 *
+	 * @param authSocketBuilder
+	 * @param metadataBrokerList
+	 * @param clientIdString clientId to send with request.
+	 * @return a new MetaData object containing information on the topic.
+	 */
+	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
+		 List<String> metadataBrokerList,
+		 String clientIdString) {
+		LOG.info("Getting metadata for all topics");
+
+		MetaData metadata = new MetaData();
+		metadata.metadataBrokerList = metadataBrokerList;
+		metadata.correlationId = (int) System.currentTimeMillis();
+		metadata.clientId = clientIdString.getBytes(UTF8);
+
+		return getMetaData(metadata,
+			 buildMetadataRequest(metadata),
+			 authSocketBuilder);
+	}
+
+	private static MetaData getMetaData(MetaData metadata,
+		 byte[] request, AuthenticatedSocketBuilder authSocketBuilder) {
 
 		// Get the broker seeds from the config.
 		List<HostAndPort> seedBrokers = new ArrayList<>();
-		for (String hnp : metadataBrokerList) {
+		for (String hnp : metadata.metadataBrokerList) {
 			String[] hostPort = hnp.split(":", 2);
 			try {
 				for(InetAddress curhost: InetAddress.getAllByName(hostPort[0])) {
@@ -88,7 +123,6 @@ public class MetaData {
 
 		// Try each seed broker in a random order
 		Collections.shuffle(seedBrokers);
-
 		Socket sock = null;
 		for (HostAndPort hnp : seedBrokers) {
 			try {
@@ -110,10 +144,7 @@ public class MetaData {
 		}
 
 		try {
-			sock.getOutputStream().write(
-				 buildMetadataRequest(topicString.getBytes(UTF8),
-					  clientIdString.getBytes(UTF8), metadata.getCorrelationId()));
-
+			sock.getOutputStream().write(request);
 			byte[] sizeBuffer = new byte[4];
 			InputStream in = sock.getInputStream();
 			int bytesRead = 0;
@@ -149,9 +180,7 @@ public class MetaData {
 				int nodeId = responseBuffer.getInt();
 				String host = readString(responseBuffer);
 				int port = responseBuffer.getInt();
-
 				metadata.getBrokers().put(nodeId, new Broker(nodeId, host, port));
-
 				LOG.debug("Broker {} @ {}:{}", nodeId, host, port);
 			}
 
@@ -199,11 +228,18 @@ public class MetaData {
 		} catch (IOException e) {
 			LOG.error("Failed to get metadata");
 			return null;
-		}
+		} finally {
+			try {
+				sock.close();
+			} catch (IOException ioe) {
+				LOG.error("failed to close socket: ", ioe);
+			}
+		 }
 
 		LOG.info("Metadata request successful");
 		return metadata;
 	}
+
 
 	private static String readString(ByteBuffer bb) {
 		short length = bb.getShort();
@@ -212,22 +248,32 @@ public class MetaData {
 		return new String(a, UTF8);
 	}
 
-	private static byte[] buildMetadataRequest(byte[] topic, byte[] clientId,
-		 int correlationId) {
-		byte[] request = new byte[20 + clientId.length + topic.length];
+	private static byte[] buildMetadataRequest(MetaData md) {
+		byte[] request = new byte[20 + md.clientId.length];
 		ByteBuffer bb = ByteBuffer.wrap(request);
-		bb.putInt(16 + clientId.length + topic.length);
+		bb.putInt(16 + md.clientId.length);
 		bb.putShort(Constants.APIKEY_METADATA);
 		bb.putShort(Constants.API_VERSION);
-		bb.putInt(correlationId);
-		bb.putShort((short) clientId.length);
-		bb.put(clientId);
+		bb.putInt(md.correlationId);
+		bb.putShort((short) md.clientId.length);
+		bb.put(md.clientId);
+		bb.putInt(0);
+		return request;
+	}
 
+	private static byte[] buildMetadataRequest(MetaData md, byte[] topic) {
+		byte[] request = new byte[20 + md.clientId.length + topic.length];
+		ByteBuffer bb = ByteBuffer.wrap(request);
+		bb.putInt(16 + md.clientId.length + topic.length);
+		bb.putShort(Constants.APIKEY_METADATA);
+		bb.putShort(Constants.API_VERSION);
+		bb.putInt(md.correlationId);
+		bb.putShort((short) md.clientId.length);
+		bb.put(md.clientId);
 		// topics.
 		bb.putInt(1);
 		bb.putShort((short) topic.length);
 		bb.put(topic);
-
 		return request;
 	}
 
@@ -269,10 +315,6 @@ public class MetaData {
 
 	public int getCorrelationId() {
 		return correlationId;
-	}
-
-	public void setCorrelationId(int correlationId) {
-		this.correlationId = correlationId;
 	}
 
 	@Override
