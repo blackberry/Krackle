@@ -98,10 +98,8 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 	}
 
 	@Override
-	public void configure(Map<String, ?> configs)
-		 throws MissingConfigurationException,
-		 InvalidConfigurationTypeException,
-		 SaslException {
+	public void configure(Map<String, ?> configs) throws
+		 MissingConfigurationException, InvalidConfigurationTypeException, SaslException {
 
 		if (!configs.containsKey("subject")) {
 			throw new MissingConfigurationException("`subject` not defined in configration");
@@ -134,6 +132,7 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 		this.clientPrincipalName = clientPrincipal.getName();
 		this.saslClient = createSaslClient();
 		configured = true;
+		LOG.info("authenticator has been configured");
 	}
 
 	private SaslClient createSaslClient() throws SaslException {
@@ -167,19 +166,26 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 		if (!configured) {
 			throw new IOException("authentication attempted on unconfigured authenticator");
 		}
-		byte[] challenge;
 		while (!saslClient.isComplete()) {
 			switch (saslState) {
 				case INITIAL:
+					LOG.debug("saslClient has initial response? {}",
+						 saslClient.hasInitialResponse());
 					sendSaslToken(EMPTY);
 					saslState = SaslState.INTERMEDIATE;
+					LOG.debug("sent initial empty sasl token");
 					break;
 				case INTERMEDIATE:
+					byte[] challenge;
+					LOG.debug("in intermediate");
 					int length = inStream.readInt();
+					LOG.debug("in intermediate - read  int, length of response is {}", length);
 					challenge = new byte[length];
 					inStream.readFully(challenge);
+					LOG.debug("read response");
 					sendSaslToken(challenge);
 					if (saslClient.isComplete()) {
+						LOG.debug("complete sasl state detected in intermediate");
 						saslState = SaslState.COMPLETE;
 					}
 					break;
@@ -189,6 +195,7 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 					throw new IOException("SASL handshake failed");
 			}
 		}
+		LOG.debug("authentication complete");
 	}
 
 	private void sendSaslToken(byte[] serverToken) throws IOException {
@@ -196,9 +203,11 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 			try {
 				byte[] saslToken = createSaslToken(serverToken);
 				if (saslToken != null) {
+					LOG.debug("sending sasl token of length: {}", saslToken.length);
 					outStream.writeInt(saslToken.length);
 					outStream.write(saslToken);
 					outStream.flush();
+					LOG.debug("sent sasl token of length: {}", saslToken.length);
 				}
 			} catch (IOException e) {
 				saslState = SaslState.FAILED;
@@ -217,7 +226,12 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 			return Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
 				@Override
 				public byte[] run() throws SaslException {
-					return saslClient.evaluateChallenge(saslToken);
+					LOG.debug("evaluating challenge of length {} to {}",
+						 saslToken.length,
+						 socket.getInetAddress().getHostAddress());
+					byte[] evaluation = saslClient.evaluateChallenge(saslToken);
+					LOG.debug("evaluation length is {}", evaluation.length);
+					return evaluation;
 				}
 			});
 		} catch (PrivilegedActionException e) {

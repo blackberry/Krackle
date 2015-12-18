@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.KafkaError;
 import com.blackberry.bdp.common.jmx.MetricRegistrySingleton;
+import com.blackberry.bdp.krackle.auth.AuthenticationException;
 import com.blackberry.bdp.krackle.compression.Compressor;
 import com.blackberry.bdp.krackle.compression.GzipCompressor;
 import com.blackberry.bdp.krackle.compression.SnappyCompressor;
@@ -57,20 +58,20 @@ public class Producer {
 	private static final Logger LOG = LoggerFactory.getLogger(Producer.class);
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 
-	private ProducerConfiguration conf;
+	private final ProducerConfiguration conf;
 
-	private String clientIdString;
-	private byte[] clientIdBytes;
-	private short clientIdLength;
+	private final String clientIdString;
+	private final byte[] clientIdBytes;
+	private final short clientIdLength;
 
-	private String keyString;
+	private final String keyString;
 	private int partitionModifier;
-	private byte[] keyBytes;
-	private int keyLength;
+	private final byte[] keyBytes;
+	private final int keyLength;
 
 	private String topicString;
-	private byte[] topicBytes;
-	private short topicLength;
+	private final byte[] topicBytes;
+	private final short topicLength;
 
 	// Various configs
 	private short requiredAcks;
@@ -99,17 +100,17 @@ public class Producer {
 
 	// We could be using crc in 2 separate blocks, which could cause corruption
 	// with one instance.
-	private CRC32 crcSend = new CRC32();
+	private final CRC32 crcSend = new CRC32();
 
 	private Sender sender = null;
 	private ArrayList<Thread> senderThreads = new ArrayList<>();
-	private ArrayList<Sender> senders = new ArrayList<>();
+	private final ArrayList<Sender> senders = new ArrayList<>();
 
 	private boolean closed = false;
 
-	private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+	private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
-	private MetricRegistry metrics;
+	private final MetricRegistry metrics;
 	private Meter mReceived = null;
 	private Meter mReceivedTotal = null;
 	private Meter mSent = null;
@@ -508,7 +509,10 @@ public class Producer {
 
 		private void updateMetaDataAndConnection() throws MissingPartitionsException {
 			LOG.info("Updating metadata");
-			metadata = MetaData.getMetaData(conf.getMetadataBrokerList(), topicString, clientIdString);
+			metadata = MetaData.getMetaData(conf.getAuthSocketBuilder(),
+				 conf.getMetadataBrokerList(),
+				 topicString,
+				 clientIdString);
 			LOG.debug("Metadata: {}", metadata);
 			Topic topic = metadata.getTopic(topicString);
 
@@ -528,7 +532,10 @@ public class Producer {
 			}
 			partition = (Math.abs(keyString.hashCode()) + partitionModifier) % topic.getNumPartitions();
 
-			LOG.info("Sending to partition {} of {}", partition, topic.getNumPartitions());
+			LOG.info("rotated onto partition {}-{} (from {} available partitions)",
+				 topic.getName(),
+				 partition,
+				 topic.getNumPartitions());
 
 			broker = metadata.getBroker(topic.getPartition(partition).getLeader());
 
@@ -548,12 +555,14 @@ public class Producer {
 				}
 
 				try {
-					socket = new Socket(broker.getHost(), broker.getPort());
+					socket = conf.getAuthSocketBuilder().build(broker.getHost(), broker.getPort());
 					socket.setSendBufferSize(conf.getSendBufferSize());
 					socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
 					LOG.info("Connected to {}", socket);
 					in = socket.getInputStream();
 					out = socket.getOutputStream();
+				} catch (AuthenticationException e) {
+					LOG.error("Error connecting to broker.", e);
 				} catch (UnknownHostException e) {
 					LOG.error("Error connecting to broker.", e);
 				} catch (IOException e) {

@@ -15,9 +15,14 @@
  */
 package com.blackberry.bdp.krackle.consumer;
 
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder.Protocol;
+import com.blackberry.bdp.krackle.auth.AuthenticationException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import javax.security.auth.login.LoginContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +88,7 @@ import org.slf4j.LoggerFactory;
 public class ConsumerConfiguration {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ConsumerConfiguration.class);
-
+	private final Properties props;
 	private List<String> metadataBrokerList;
 	private int fetchMessageMaxBytes;
 	private int fetchWaitMaxMs;
@@ -92,16 +97,25 @@ public class ConsumerConfiguration {
 	private String autoOffsetReset;
 	private int socketTimeoutMs;
 
+	// Security properties and objects
+	private HashMap<String, Object> securityConfigs;
+	private String kafkaServicePrincipal;
+	private String securityProtocolString;
+	private Protocol kafkaSecurityProtocol;
+	private String jaasLoginContextName;
+	private AuthenticatedSocketBuilder authSocketBuilder;
+
 	/**
 	 * Creates a new configuration from a given Properties object.
 	 *
 	 * @param props Properties to build configuration from.
 	 * @throws Exception
 	 */
-	public ConsumerConfiguration(Properties props) throws Exception {
+	public ConsumerConfiguration( Properties props) throws Exception {
 		LOG.info("Building configuration.");
+		this.props = props;
 
-		metadataBrokerList = new ArrayList<String>();
+		metadataBrokerList = new ArrayList<>();
 		String metadataBrokerListString = props.getProperty("metadata.broker.list");
 
 		if (metadataBrokerListString == null || metadataBrokerListString.isEmpty()) {
@@ -163,6 +177,51 @@ public class ConsumerConfiguration {
 			throw new Exception("socket.timeout.seconds must be positive.");
 		}
 
+		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
+
+		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name.", "kafkaClient").trim();
+
+		securityProtocolString = props.getProperty("kafka.security.protocol").trim().toUpperCase();
+	}
+
+	/**
+	 * Security Protocols that Do Not Require a JAAS LoginContext
+	 @throws AuthenticationException
+	 */
+	public void configureSecurity() throws AuthenticationException {
+		securityConfigs = new HashMap<>();
+		switch (securityProtocolString) {
+			case "PLAINTEXT":
+				kafkaSecurityProtocol = Protocol.PLAINTEXT;
+				break;
+			default:
+				throw new AuthenticationException(String.format(
+					 "kafka.security.protocol=%s not recognized",
+					 securityProtocolString));
+		}
+		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
+	}
+
+	/**
+	 * Security Protocols that Require a JAAS LoginContext
+	 @param loginContext
+ 	 @throws AuthenticationException
+	 */
+	public void configureSecurity(LoginContext loginContext) throws AuthenticationException {
+		securityConfigs = new HashMap<>();
+		switch (securityProtocolString) {
+			case "SASL_PLAINTEXT":
+				kafkaSecurityProtocol = Protocol.SASL_PLAINTEXT;
+				securityConfigs.put("subject", loginContext.getSubject());
+				securityConfigs.put("servicePrincipal", kafkaServicePrincipal);
+				break;
+			case "SASL_SSL":
+				kafkaSecurityProtocol = Protocol.SASL_SSL;
+				break;
+			default:
+				throw new AuthenticationException("kafka.security.protocol.service.principal not recognized");
+		}
+		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
 	}
 
 	public List<String> getMetadataBrokerList() {
@@ -216,7 +275,7 @@ public class ConsumerConfiguration {
 	/**
 	 * @return the socketTimeoutMs
 	 */
-	public int getSocketTimeoutMs() {
+	final public int getSocketTimeoutMs() {
 		return socketTimeoutMs;
 	}
 
@@ -225,6 +284,41 @@ public class ConsumerConfiguration {
 	 */
 	public void setSocketTimeoutMs(int socketTimeoutMs) {
 		this.socketTimeoutMs = socketTimeoutMs;
+	}
+
+	/**
+	 * @return the kafkaServicePrincipal
+	 */
+	public String getKafkaServicePrincipal() {
+		return kafkaServicePrincipal;
+	}
+
+	/**
+	 * @return the kafkaSecurityProtocol
+	 */
+	public Protocol getKafkaSecurityProtocol() {
+		return kafkaSecurityProtocol;
+	}
+
+	/**
+	 * @return the jaasLoginContextName
+	 */
+	public String getJaasLoginContextName() {
+		return jaasLoginContextName;
+	}
+
+	/**
+	 * @return the securityConfigs
+	 */
+	public HashMap<String, Object> getSecurityConfigs() {
+		return securityConfigs;
+	}
+
+	/**
+	 * @return the authSocketBuilder
+	 */
+	public AuthenticatedSocketBuilder getAuthSocketBuilder() {
+		return authSocketBuilder;
 	}
 
 }

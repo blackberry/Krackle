@@ -593,12 +593,14 @@ public class Consumer {
 
 		while (!stopping) {
 			try {
-				MetaData meta = MetaData.getMetaData(conf.getMetadataBrokerList(), topic, clientId);
+				MetaData meta = MetaData.getMetaData(conf.getAuthSocketBuilder(),
+					 conf.getMetadataBrokerList(),
+					 topic,
+					 clientId);
 				broker = meta.getBroker(meta.getTopic(topic).getPartition(partition).getLeader());
-
 				LOG.info("[{}-{}] connecting to broker {}", topic, partition, broker.getNiceDescription());
 
-				brokerSocket = new Socket(broker.getHost(), broker.getPort());
+				brokerSocket = conf.getAuthSocketBuilder().build(broker.getHost(), broker.getPort());
 				brokerSocket.setSoTimeout(conf.getSocketTimeoutMs());
 				brokerSocket.setKeepAlive(true);
 				brokerSocket.setReceiveBufferSize(conf.getSocketReceiveBufferBytes());
