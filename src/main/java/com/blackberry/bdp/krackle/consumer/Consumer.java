@@ -35,11 +35,17 @@ import com.codahale.metrics.MetricRegistry;
 import java.net.SocketTimeoutException;
 
 /**
- * An implementation of the Kafka 0.8 consumer.
+ * An implementation of the Kafka 0.9 consumer.
  *
- * This class acts as a consumer of data from a cluster of Kafka brokers. Each instance only reads data from a single partition of a single topic. If you need to read more than that, then instantiate more instances.
+ * This class acts as a consumer of data from a cluster of Kafka brokers.
+ * Each instance only reads data from a single partition of a single topic.
+ * If you need to read more than that, then instantiate more instances.
  *
- * This class was designed to be very light weight. The standard Java client creates a lot of objects, and therefore causes a lot of garbage collection that leads to a major slowdown in performance. This client creates no new objects during steady state running, and so avoids all garbage collection overhead.
+ * This class was designed to be very light weight. The standard Java
+ * client creates a lot of objects, and therefore causes a lot of garbage
+ * collection that leads to a major slowdown in performance. This client
+ * creates no new objects during steady state running, and so avoids
+ * all garbage collection overhead.
  */
 public class Consumer {
 
@@ -597,7 +603,7 @@ public class Consumer {
 					 conf.getMetadataBrokerList(),
 					 topic,
 					 clientId);
-				broker = meta.getBroker(meta.getTopic(topic).getPartition(partition).getLeader());
+				broker = meta.getTopic(topic).getPartition(partition).getLeader();
 				LOG.info("[{}-{}] connecting to broker {}", topic, partition, broker.getNiceDescription());
 
 				brokerSocket = conf.getAuthSocketBuilder().build(broker.getHost(), broker.getPort());

@@ -23,46 +23,46 @@ import java.util.Set;
  */
 public class Partition {
 
-	int partId;
-	int leader;
+	int partitionId;
+	Broker leader;
 
-	Set<Integer> replicas = new HashSet<Integer>();
-	Set<Integer> inSyncReplicas = new HashSet<Integer>();
+	Set<Broker> replicas = new HashSet<>();
+	Set<Broker> inSyncReplicas = new HashSet<>();
 
 	public Partition() {
 	}
 
 	public Partition(int partId) {
-		this.partId = partId;
+		this.partitionId = partId;
 	}
 
-	public int getPartId() {
-		return partId;
+	public int getPartitionId() {
+		return partitionId;
 	}
 
-	public void setPartId(int partId) {
-		this.partId = partId;
+	public void setPartitionId(int partId) {
+		this.partitionId = partId;
 	}
 
-	public int getLeader() {
+	public Broker getLeader() {
 		return leader;
 	}
 
-	public void setLeader(int leader) {
+	public void setLeader(Broker leader) {
 		this.leader = leader;
 	}
 
-	public Set<Integer> getReplicas() {
+	public Set<Broker> getReplicas() {
 		return replicas;
 	}
 
-	public Set<Integer> getInSyncReplicas() {
+	public Set<Broker> getInSyncReplicas() {
 		return inSyncReplicas;
 	}
 
 	@Override
 	public String toString() {
-		return "Partition [partId=" + partId + ", leader=" + leader + ", replicas="
+		return "Partition [partId=" + partitionId + ", leader=" + leader + ", replicas="
 			 + replicas + ", inSyncReplicas=" + inSyncReplicas + "]";
 	}
 

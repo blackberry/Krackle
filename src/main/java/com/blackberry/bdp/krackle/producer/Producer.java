@@ -537,7 +537,7 @@ public class Producer {
 				 partition,
 				 topic.getNumPartitions());
 
-			broker = metadata.getBroker(topic.getPartition(partition).getLeader());
+			broker = topic.getPartition(partition).getLeader();
 
 			// Only reset our connection if the broker has changed, or it's forced
 			String newBrokerAddress = broker.getHost() + ":" + broker.getPort();
