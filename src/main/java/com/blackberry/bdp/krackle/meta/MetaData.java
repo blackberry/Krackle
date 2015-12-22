@@ -240,7 +240,7 @@ public class MetaData {
 						 leaderId, partError);
 
 					Partition part = new Partition(partId);
-					part.setLeader(metadata.brokers.get(partId));
+					part.setLeader(metadata.brokers.get(leaderId));
 
 					int numReplicas = responseBuffer.getInt();
 					for (int k = 0; k < numReplicas; k++) {

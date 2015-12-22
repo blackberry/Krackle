@@ -261,9 +261,11 @@ public class ProducerConfiguration {
 		}
 	}
 
-	private void configureSecurity(LoginContext loginContext) throws AuthenticationException {
+	private void configureSecurity(LoginContext loginContext)
+		 throws AuthenticationException, LoginException {
 		switch (kafkaSecurityProtocol) {
 			case SASL_PLAINTEXT:
+				loginContext.login();
 				securityConfigs.put("subject", loginContext.getSubject());
 				securityConfigs.put("servicePrincipal", kafkaServicePrincipal);
 				break;
