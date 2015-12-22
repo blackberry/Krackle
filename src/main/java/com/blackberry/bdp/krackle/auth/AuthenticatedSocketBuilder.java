@@ -118,10 +118,7 @@ public class AuthenticatedSocketBuilder {
 					throw new AuthenticationException(
 						 String.format("%s not supported", protocol));
 			}
-		} catch (IOException
-			 | MissingConfigurationException
-			 | InvalidConfigurationTypeException
-			 | AuthenticationException e) {
+		} catch (IOException | MissingConfigurationException | InvalidConfigurationTypeException | AuthenticationException e) {
 			LOG.error("an {} exception occured {}: ",
 				 e.getClass().getCanonicalName(),
 				 e.getMessage(),
