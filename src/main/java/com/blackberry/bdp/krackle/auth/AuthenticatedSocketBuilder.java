@@ -1,13 +1,11 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright 2015 BlackBerry, Limited.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +18,7 @@ package com.blackberry.bdp.krackle.auth;
 import com.blackberry.bdp.krackle.exceptions.MissingConfigurationException;
 import com.blackberry.bdp.krackle.exceptions.InvalidConfigurationTypeException;
 import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
+import com.blackberry.bdp.krackle.jaas.SecurityConfiguration;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -41,6 +40,14 @@ public class AuthenticatedSocketBuilder {
 
 	private static final Logger LOG = LoggerFactory.getLogger(
 		 AuthenticatedSocketBuilder.class);
+
+	/**
+	 * Create an AuthenticatedSocketBuilder from a SecurityConfiguration
+	 * @param configuration
+	 */
+	public AuthenticatedSocketBuilder(SecurityConfiguration configuration) {
+		this(configuration.getKafkaSecurityProtocol(), configuration.getConfiguration());
+	}
 
 	public AuthenticatedSocketBuilder(String protocolString,
 		 Map<String, Object> securityConfigs) throws AuthenticationException {
@@ -64,6 +71,11 @@ public class AuthenticatedSocketBuilder {
 		}
 	}
 
+	/**
+	 * Create an AuthenticatedSocketBuilder from a protocol and configuration map
+	 * @param protocol
+	 * @param securityConfigs
+	 */
 	public AuthenticatedSocketBuilder(Protocol protocol,
 		 Map<String, Object> securityConfigs) {
 		this.protocol = protocol;
