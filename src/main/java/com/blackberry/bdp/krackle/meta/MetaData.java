@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
-import com.blackberry.bdp.krackle.auth.AuthenticationException;
+import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
 import java.util.Arrays;
 
 /**

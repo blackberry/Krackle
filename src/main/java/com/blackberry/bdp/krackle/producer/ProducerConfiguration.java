@@ -18,9 +18,9 @@
 package com.blackberry.bdp.krackle.producer;
 
 import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
-import com.blackberry.bdp.krackle.auth.AuthenticationException;
-import com.blackberry.bdp.krackle.auth.Login;
-import com.blackberry.bdp.krackle.auth.Login.ClientCallbackHandler;
+import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
+import com.blackberry.bdp.krackle.jaas.Login;
+import com.blackberry.bdp.krackle.jaas.Login.ClientCallbackHandler;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

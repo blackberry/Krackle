@@ -31,7 +31,7 @@
  *
  */
 
-package com.blackberry.bdp.krackle.auth;
+package com.blackberry.bdp.krackle;
 
 import java.util.Date;
 

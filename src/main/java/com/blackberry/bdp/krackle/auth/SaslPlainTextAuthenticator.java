@@ -17,13 +17,14 @@
  */
 package com.blackberry.bdp.krackle.auth;
 
+import com.blackberry.bdp.krackle.exceptions.MissingConfigurationException;
+import com.blackberry.bdp.krackle.exceptions.InvalidConfigurationTypeException;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 
-import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;

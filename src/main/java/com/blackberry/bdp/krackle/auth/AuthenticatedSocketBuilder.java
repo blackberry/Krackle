@@ -17,6 +17,9 @@
  */
 package com.blackberry.bdp.krackle.auth;
 
+import com.blackberry.bdp.krackle.exceptions.MissingConfigurationException;
+import com.blackberry.bdp.krackle.exceptions.InvalidConfigurationTypeException;
+import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;

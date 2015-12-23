@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.blackberry.bdp.krackle.auth;
+package com.blackberry.bdp.krackle.jaas;
 
 /**
  * This class was copied from the Apache ZooKeeper project:
@@ -43,6 +43,7 @@ package com.blackberry.bdp.krackle.auth;
  * See ZooKeeperSaslServer for server-side usage.
  * See ZooKeeperSaslClient for client-side usage.
  */
+import com.blackberry.bdp.krackle.Time;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
@@ -167,8 +168,8 @@ public class Login {
 							Object[] logPayload = {expiryDate, getPrincipal(), getPrincipal()};
 							LOG.error("The TGT cannot be renewed beyond the next expiry date: {}."
 								 + "This process will not be able to authenticate new SASL connections after that "
-								 + "time (for example, it will not be authenticate a new connection with a Zookeeper "
-								 + "Quorum member).  Ask your system administrator to either increase the "
+								 + "time (for example, it will not be authenticate a new connection with a Kafka "
+								 + "broker).  Ask your system administrator to either increase the "
 								 + "'renew until' time by doing : 'modprinc -maxrenewlife {}' within "
 								 + "kadmin, or instead, to generate a keytab for {}. Because the TGT's "
 								 + "expiry cannot be further extended by refreshing, exiting refresh thread now.", logPayload);
@@ -378,8 +379,8 @@ public class Login {
 		if (!isKrbTicket) {
 			return;
 		}
-		LoginContext login = getLogin();
-		if (login == null) {
+		LoginContext existingLogin = getLogin();
+		if (existingLogin == null) {
 			throw new LoginException("login must be done first");
 		}
 		if (!hasSufficientTimeElapsed()) {
@@ -390,13 +391,13 @@ public class Login {
 			//clear up the kerberos state. But the tokens are not cleared! As per
 			//the Java kerberos login module code, only the kerberos credentials
 			//are cleared
-			login.logout();
+			existingLogin.logout();
 			//login and also update the subject field of this instance to
 			//have the new credentials (pass it to the LoginContext constructor)
-			login = new LoginContext(loginContextName, getSubject());
+			existingLogin = new LoginContext(loginContextName, getSubject());
 			LOG.info("Initiating re-login for {}", principal);
-			login.login();
-			setLogin(login);
+			existingLogin.login();
+			setLogin(existingLogin);
 		}
 	}
 

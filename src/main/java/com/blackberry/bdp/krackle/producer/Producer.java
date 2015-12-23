@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.KafkaError;
 import com.blackberry.bdp.common.jmx.MetricRegistrySingleton;
-import com.blackberry.bdp.krackle.auth.AuthenticationException;
+import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
 import com.blackberry.bdp.krackle.compression.Compressor;
 import com.blackberry.bdp.krackle.compression.GzipCompressor;
 import com.blackberry.bdp.krackle.compression.SnappyCompressor;
