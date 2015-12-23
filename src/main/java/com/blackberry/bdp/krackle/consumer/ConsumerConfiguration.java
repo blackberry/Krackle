@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,12 +99,11 @@ public class ConsumerConfiguration {
 	private int socketTimeoutMs;
 
 	// Security properties and objects
-	private HashMap<String, Object> securityConfigs;
-	private String kafkaServicePrincipal;
-	private String securityProtocolString;
-	private Protocol kafkaSecurityProtocol;
-	private String jaasLoginContextName;
-	private AuthenticatedSocketBuilder authSocketBuilder;
+	private final HashMap<String, Object> securityConfigs;
+	private final String kafkaServicePrincipal;
+	private final AuthenticatedSocketBuilder.Protocol kafkaSecurityProtocol;
+	private final String jaasLoginContextName;
+	private final AuthenticatedSocketBuilder authSocketBuilder;
 
 	/**
 	 * Creates a new configuration from a given Properties object.
@@ -177,53 +177,45 @@ public class ConsumerConfiguration {
 			throw new Exception("socket.timeout.seconds must be positive.");
 		}
 
+		kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.valueOf(
+			 props.getProperty("kafka.security.protocol", "PLAINTEXT").trim().toUpperCase());
 		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
+		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name", "kafkaClient").trim();
+		securityConfigs = new HashMap<>();
+		configureSecurity();
+		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
 
-		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name.", "kafkaClient").trim();
-
-		securityProtocolString = props.getProperty("kafka.security.protocol").trim().toUpperCase();
 	}
 
-	/**
-	 * Security Protocols that Do Not Require a JAAS LoginContext
-	 @throws AuthenticationException
-	 */
-	public void configureSecurity() throws AuthenticationException {
-		securityConfigs = new HashMap<>();
-		switch (securityProtocolString) {
-			case "PLAINTEXT":
-				kafkaSecurityProtocol = Protocol.PLAINTEXT;
+	private void configureSecurity() throws AuthenticationException,
+		 LoginException {
+		switch (kafkaSecurityProtocol) {
+			case PLAINTEXT:
+				break;
+			case SASL_PLAINTEXT:
+				configureSecurity(new LoginContext(jaasLoginContextName));
 				break;
 			default:
 				throw new AuthenticationException(String.format(
-					 "kafka.security.protocol=%s not recognized",
-					 securityProtocolString));
+					 "kafka.security.protocol=%s not recognized or supported",
+					 kafkaSecurityProtocol));
 		}
-		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
 	}
 
-	/**
-	 * Security Protocols that Require a JAAS LoginContext
-	 @param loginContext
- 	 @throws AuthenticationException
-	 */
-	public void configureSecurity(LoginContext loginContext) throws AuthenticationException {
-		securityConfigs = new HashMap<>();
-		switch (securityProtocolString) {
-			case "SASL_PLAINTEXT":
-				kafkaSecurityProtocol = Protocol.SASL_PLAINTEXT;
+	private void configureSecurity(LoginContext loginContext)
+		 throws AuthenticationException, LoginException {
+		switch (kafkaSecurityProtocol) {
+			case SASL_PLAINTEXT:
+				loginContext.login();
 				securityConfigs.put("subject", loginContext.getSubject());
 				securityConfigs.put("servicePrincipal", kafkaServicePrincipal);
 				break;
-			case "SASL_SSL":
-				kafkaSecurityProtocol = Protocol.SASL_SSL;
-				break;
 			default:
-				throw new AuthenticationException("kafka.security.protocol.service.principal not recognized");
+				throw new AuthenticationException(String.format(
+					 "kafka.security.protocol=%s not recognized or supported within a login context",
+					 kafkaSecurityProtocol));
 		}
-		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
 	}
-
 	public List<String> getMetadataBrokerList() {
 		return metadataBrokerList;
 	}

@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
 import com.blackberry.bdp.krackle.auth.AuthenticationException;
+import java.util.Arrays;
 
 /**
  * Gather and store metadata for a topic.
@@ -55,6 +56,25 @@ public class MetaData {
 	private int correlationId;
 	private List<String> metadataBrokerList;
 	private byte[] clientId;
+
+	/**
+	 * Metadata for a single topic with a string of seed brokers for a given client
+	 *
+	 * @param authSocketBuilder
+	 * @param metadataBrokerString
+	 * @param topic topic to get metadata about.
+	 * @param clientIdString clientId to send with request.
+	 * @return a new MetaData object containing information on the topic.
+	 */
+	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
+		 String metadataBrokerString,
+		 String topic,
+		 String clientIdString) {
+		return getMetaData(authSocketBuilder,
+			 Arrays.asList(metadataBrokerString.split(",")),
+			 topic,
+			 clientIdString);
+	}
 
 	/**
 	 * Metadata for a single topic with a list of seed brokers for a given client
@@ -79,6 +99,23 @@ public class MetaData {
 		return getMetaData(metadata,
 			 buildMetadataRequest(metadata, topic.getBytes(UTF8)),
 			 authSocketBuilder);
+	}
+
+	/**
+	 * Metadata for all topics with a string of seed brokers for a given client
+	 *
+	 * @param authSocketBuilder
+	 * @param metadataBrokerString
+	 * @param clientIdString clientId to send with request.
+	 * @return a new MetaData object containing information on the topic.
+	 */
+	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
+		 String metadataBrokerString,
+		 String clientIdString) {
+
+		return getMetaData(authSocketBuilder,
+			 Arrays.asList(metadataBrokerString.split(",")),
+			 clientIdString);
 	}
 
 	/**
@@ -198,25 +235,25 @@ public class MetaData {
 
 					short partError = responseBuffer.getShort();
 					int partId = responseBuffer.getInt();
-					int leader = responseBuffer.getInt();
+					int leaderId = responseBuffer.getInt();
 					LOG.debug("    Partition ID={}, Leader={} (Error={})", partId,
-						 leader, partError);
+						 leaderId, partError);
 
 					Partition part = new Partition(partId);
-					part.setLeader(leader);
+					part.setLeader(metadata.brokers.get(leaderId));
 
 					int numReplicas = responseBuffer.getInt();
 					for (int k = 0; k < numReplicas; k++) {
-						int rep = responseBuffer.getInt();
-						LOG.debug("        Replica on {}", rep);
-						part.getReplicas().add(rep);
+						int replicaBrokerId = responseBuffer.getInt();
+						LOG.debug("        Replica on {}", replicaBrokerId);
+						part.getReplicas().add(metadata.brokers.get(replicaBrokerId));
 					}
 
 					int numIsr = responseBuffer.getInt();
 					for (int k = 0; k < numIsr; k++) {
-						int isr = responseBuffer.getInt();
-						LOG.debug("        Isr on {}", isr);
-						part.getInSyncReplicas().add(isr);
+						int isrBrokerId = responseBuffer.getInt();
+						LOG.debug("        Isr on {}", isrBrokerId);
+						part.getInSyncReplicas().add(metadata.brokers.get(isrBrokerId));
 					}
 
 					t.getPartitions().add(part);

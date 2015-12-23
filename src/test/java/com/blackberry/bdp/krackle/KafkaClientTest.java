@@ -79,7 +79,6 @@ public class KafkaClientTest {
 		producerProps.setProperty("metadata.broker.list", "localhost:9876");
 		ProducerConfiguration producerConf = new ProducerConfiguration(
 			 producerProps, topic);
-		producerConf.configureSecurity();
 		while (true) {
 			MetaData meta;
 			try {

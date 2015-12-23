@@ -24,7 +24,7 @@ import java.util.List;
 public class Topic {
 
 	String name;
-	List<Partition> partitions = new ArrayList<Partition>();
+	List<Partition> partitions = new ArrayList<>();
 
 	public Topic() {
 	}
@@ -39,7 +39,7 @@ public class Topic {
 
 	public Partition getPartition(int i) {
 		for (Partition p : partitions) {
-			if (p.getPartId() == i) {
+			if (p.getPartitionId() == i) {
 				return p;
 			}
 		}

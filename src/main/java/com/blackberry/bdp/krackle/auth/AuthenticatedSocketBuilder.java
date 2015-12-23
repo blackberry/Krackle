@@ -27,23 +27,44 @@ import org.slf4j.LoggerFactory;
 public class AuthenticatedSocketBuilder {
 
 	public static enum Protocol {
-
 		PLAINTEXT,
+		SSL,
 		SASL_PLAINTEXT,
 		SASL_SSL
-
 	}
 
 	private final Protocol protocol;
-	private final Map<String, Object> configs;
+	private Map<String, Object> securityConfigs;
 
 	private static final Logger LOG = LoggerFactory.getLogger(
 		 AuthenticatedSocketBuilder.class);
 
+	public AuthenticatedSocketBuilder(String protocolString,
+		 Map<String, Object> securityConfigs) throws AuthenticationException {
+		this.securityConfigs = securityConfigs;
+		switch (protocolString.trim().toUpperCase()) {
+			case "PLAINTEXT":
+				protocol = Protocol.PLAINTEXT;
+				break;
+			case "SSL":
+				protocol = Protocol.SSL;
+				break;
+			case "SASL_PLAINTEXT":
+				protocol = Protocol.SASL_PLAINTEXT;
+				break;
+			case "SASL_SSL":
+				protocol = Protocol.SASL_SSL;
+				break;
+			default:
+				throw new AuthenticationException(String.format(
+					 "protocol %s not recognized", protocolString));
+		}
+	}
+
 	public AuthenticatedSocketBuilder(Protocol protocol,
-		 Map<String, Object> configs) {
+		 Map<String, Object> securityConfigs) {
 		this.protocol = protocol;
-		this.configs = configs;
+		this.securityConfigs = securityConfigs;
 	}
 
 	public Socket build(InetAddress host, int port)
@@ -88,8 +109,8 @@ public class AuthenticatedSocketBuilder {
 						 = new SaslPlainTextAuthenticator(socket);
 					LOG.debug("using remote hostname {}",
 						 socket.getInetAddress().getHostName());
-					configs.put("hostname", socket.getInetAddress().getHostName());
-					spta.configure(configs);
+					securityConfigs.put("hostname", socket.getInetAddress().getHostName());
+					spta.configure(securityConfigs);
 					spta.authenticate();
 					LOG.info("sasl authenticated socket has been created");
 					return spta.getSocket();
