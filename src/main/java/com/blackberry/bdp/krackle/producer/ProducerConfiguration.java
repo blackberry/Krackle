@@ -18,14 +18,14 @@
 package com.blackberry.bdp.krackle.producer;
 
 import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
-import com.blackberry.bdp.krackle.auth.AuthenticationException;
-import com.blackberry.bdp.krackle.auth.Authenticator;
+import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
+import com.blackberry.bdp.krackle.jaas.Login;
+import com.blackberry.bdp.krackle.jaas.Login.ClientCallbackHandler;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.zip.Deflater;
-import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 
 import org.slf4j.Logger;
@@ -170,7 +170,7 @@ public class ProducerConfiguration {
 	private static final Logger LOG = LoggerFactory.getLogger(ProducerConfiguration.class);
 
 	protected static final int ONE_MB = 1024 * 1024;
-	private Properties props;
+	private final Properties props;
 	public String topicName;
 
 	// Options matching the producer client
@@ -252,7 +252,7 @@ public class ProducerConfiguration {
 			case PLAINTEXT:
 				break;
 			case SASL_PLAINTEXT:
-				configureSecurity(new LoginContext(jaasLoginContextName));
+				configureSecurity(jaasLoginContextName);
 				break;
 			default:
 				throw new AuthenticationException(String.format(
@@ -261,12 +261,14 @@ public class ProducerConfiguration {
 		}
 	}
 
-	private void configureSecurity(LoginContext loginContext)
+	private void configureSecurity(String loginContextName)
 		 throws AuthenticationException, LoginException {
 		switch (kafkaSecurityProtocol) {
 			case SASL_PLAINTEXT:
-				loginContext.login();
-				securityConfigs.put("subject", loginContext.getSubject());
+				Login login = new Login(loginContextName, new ClientCallbackHandler());
+				login.startThreadIfNeeded();
+				securityConfigs.put("subject", login.getSubject());
+				securityConfigs.put("clientPrincipal", login.getPrincipal());
 				securityConfigs.put("servicePrincipal", kafkaServicePrincipal);
 				break;
 			default:

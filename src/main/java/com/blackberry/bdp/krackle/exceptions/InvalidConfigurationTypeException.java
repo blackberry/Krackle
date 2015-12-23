@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.blackberry.bdp.krackle.auth;
+package com.blackberry.bdp.krackle.exceptions;
 
 public class InvalidConfigurationTypeException extends Exception {
-	InvalidConfigurationTypeException(String message) {
+	public InvalidConfigurationTypeException(String message) {
 		super(message);
 	}
 }

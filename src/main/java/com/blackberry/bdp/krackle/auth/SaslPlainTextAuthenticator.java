@@ -17,13 +17,14 @@
  */
 package com.blackberry.bdp.krackle.auth;
 
+import com.blackberry.bdp.krackle.exceptions.MissingConfigurationException;
+import com.blackberry.bdp.krackle.exceptions.InvalidConfigurationTypeException;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 
-import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 	private String servicePrincipal;
 
 	private SaslClient saslClient;
-	private String clientPrincipalName;
+	private String clientPrincipal;
 	private boolean configured;
 
 	private final Socket socket;
@@ -119,6 +120,15 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 			servicePrincipal = (String) configs.get("servicePrincipal");
 		}
 
+		if (!configs.containsKey("clientPrincipal")) {
+			throw new MissingConfigurationException("`clientPrincipal` not defined in configration");
+		} else if (!configs.get("clientPrincipal").getClass().equals(String.class)) {
+			String type = String.class.getCanonicalName();
+			throw new InvalidConfigurationTypeException("`clientPrincipal` is not a " + type);
+		} else {
+			clientPrincipal = (String) configs.get("clientPrincipal");
+		}
+
 		if (!configs.containsKey("hostname")) {
 			throw new MissingConfigurationException("`hostname` not defined in configration");
 		} else if (!configs.get("hostname").getClass().equals(String.class)) {
@@ -128,8 +138,7 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 			hostname = (String) configs.get("hostname");
 		}
 
-		Principal clientPrincipal = subject.getPrincipals().iterator().next();
-		this.clientPrincipalName = clientPrincipal.getName();
+
 		this.saslClient = createSaslClient();
 		configured = true;
 		LOG.info("authenticator has been configured");
@@ -142,8 +151,8 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 				public SaslClient run() throws SaslException {
 					String[] mechs = {"GSSAPI"};
 					LOG.info("Creating SaslClient: client={}; service={}; serviceHostname={}; mechs={}",
-						 clientPrincipalName, servicePrincipal, hostname, Arrays.toString(mechs));
-					return Sasl.createSaslClient(mechs, clientPrincipalName, servicePrincipal, hostname, null,
+						 clientPrincipal, servicePrincipal, hostname, Arrays.toString(mechs));
+					return Sasl.createSaslClient(mechs, clientPrincipal, servicePrincipal, hostname, null,
 						 new ClientCallbackHandler());
 				}
 

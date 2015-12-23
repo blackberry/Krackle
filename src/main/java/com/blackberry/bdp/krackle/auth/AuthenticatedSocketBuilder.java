@@ -17,6 +17,9 @@
  */
 package com.blackberry.bdp.krackle.auth;
 
+import com.blackberry.bdp.krackle.exceptions.MissingConfigurationException;
+import com.blackberry.bdp.krackle.exceptions.InvalidConfigurationTypeException;
+import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -118,10 +121,7 @@ public class AuthenticatedSocketBuilder {
 					throw new AuthenticationException(
 						 String.format("%s not supported", protocol));
 			}
-		} catch (IOException
-			 | MissingConfigurationException
-			 | InvalidConfigurationTypeException
-			 | AuthenticationException e) {
+		} catch (IOException | MissingConfigurationException | InvalidConfigurationTypeException | AuthenticationException e) {
 			LOG.error("an {} exception occured {}: ",
 				 e.getClass().getCanonicalName(),
 				 e.getMessage(),
