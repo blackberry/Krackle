@@ -1,13 +1,11 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright 2014 BlackBerry, Limited.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,15 +16,11 @@
 package com.blackberry.bdp.krackle.producer;
 
 import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
-import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
-import com.blackberry.bdp.krackle.jaas.Login;
-import com.blackberry.bdp.krackle.jaas.Login.ClientCallbackHandler;
+import com.blackberry.bdp.krackle.jaas.SecurityConfiguration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.zip.Deflater;
-import javax.security.auth.login.LoginException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -197,10 +191,6 @@ public class ProducerConfiguration {
 	private boolean useSharedBuffers;
 
 	// Security properties and objects
-	private final HashMap<String, Object> securityConfigs;
-	private final String kafkaServicePrincipal;
-	private final AuthenticatedSocketBuilder.Protocol kafkaSecurityProtocol;
-	private final String jaasLoginContextName;
 	private final AuthenticatedSocketBuilder authSocketBuilder;
 
 
@@ -236,47 +226,9 @@ public class ProducerConfiguration {
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
 
-		kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.valueOf(
-			 props.getProperty("kafka.security.protocol", "PLAINTEXT").trim().toUpperCase());
-
-		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
-		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name", "kafkaClient").trim();
-		securityConfigs = new HashMap<>();
-		configureSecurity();
-		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
+		authSocketBuilder = new AuthenticatedSocketBuilder(new SecurityConfiguration(props));
 	}
 
-	private void configureSecurity() throws AuthenticationException,
-		 LoginException {
-		switch (kafkaSecurityProtocol) {
-			case PLAINTEXT:
-				break;
-			case SASL_PLAINTEXT:
-				configureSecurity(jaasLoginContextName);
-				break;
-			default:
-				throw new AuthenticationException(String.format(
-					 "kafka.security.protocol=%s not recognized or supported",
-					 kafkaSecurityProtocol));
-		}
-	}
-
-	private void configureSecurity(String loginContextName)
-		 throws AuthenticationException, LoginException {
-		switch (kafkaSecurityProtocol) {
-			case SASL_PLAINTEXT:
-				Login login = new Login(loginContextName, new ClientCallbackHandler());
-				login.startThreadIfNeeded();
-				securityConfigs.put("subject", login.getSubject());
-				securityConfigs.put("clientPrincipal", login.getPrincipal());
-				securityConfigs.put("servicePrincipal", kafkaServicePrincipal);
-				break;
-			default:
-				throw new AuthenticationException(String.format(
-					 "kafka.security.protocol=%s not recognized or supported within a login context",
-					 kafkaSecurityProtocol));
-		}
-	}
 
 	/**
 	 *
@@ -811,13 +763,6 @@ public class ProducerConfiguration {
 	 */
 	public AuthenticatedSocketBuilder getAuthSocketBuilder() {
 		return authSocketBuilder;
-	}
-
-	/**
-	 * @return the jaasLoginContextName
-	 */
-	public String getJaasLoginContextName() {
-		return jaasLoginContextName;
 	}
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 BlackBerry, Limited.
+ * Copyright 2015 BlackBerry, Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,10 @@
 package com.blackberry.bdp.krackle.consumer;
 
 import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
-import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder.Protocol;
-import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
+import com.blackberry.bdp.krackle.jaas.SecurityConfiguration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
-import javax.security.auth.login.LoginContext;
-import javax.security.auth.login.LoginException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,10 +95,6 @@ public class ConsumerConfiguration {
 	private int socketTimeoutMs;
 
 	// Security properties and objects
-	private final HashMap<String, Object> securityConfigs;
-	private final String kafkaServicePrincipal;
-	private final AuthenticatedSocketBuilder.Protocol kafkaSecurityProtocol;
-	private final String jaasLoginContextName;
 	private final AuthenticatedSocketBuilder authSocketBuilder;
 
 	/**
@@ -111,7 +103,7 @@ public class ConsumerConfiguration {
 	 * @param props Properties to build configuration from.
 	 * @throws Exception
 	 */
-	public ConsumerConfiguration( Properties props) throws Exception {
+	public ConsumerConfiguration(Properties props) throws Exception {
 		LOG.info("Building configuration.");
 		this.props = props;
 
@@ -177,45 +169,9 @@ public class ConsumerConfiguration {
 			throw new Exception("socket.timeout.seconds must be positive.");
 		}
 
-		kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.valueOf(
-			 props.getProperty("kafka.security.protocol", "PLAINTEXT").trim().toUpperCase());
-		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
-		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name", "kafkaClient").trim();
-		securityConfigs = new HashMap<>();
-		configureSecurity();
-		authSocketBuilder = new AuthenticatedSocketBuilder(kafkaSecurityProtocol, securityConfigs);
-
+		authSocketBuilder = new AuthenticatedSocketBuilder(new SecurityConfiguration(props));
 	}
 
-	private void configureSecurity() throws AuthenticationException,
-		 LoginException {
-		switch (kafkaSecurityProtocol) {
-			case PLAINTEXT:
-				break;
-			case SASL_PLAINTEXT:
-				configureSecurity(new LoginContext(jaasLoginContextName));
-				break;
-			default:
-				throw new AuthenticationException(String.format(
-					 "kafka.security.protocol=%s not recognized or supported",
-					 kafkaSecurityProtocol));
-		}
-	}
-
-	private void configureSecurity(LoginContext loginContext)
-		 throws AuthenticationException, LoginException {
-		switch (kafkaSecurityProtocol) {
-			case SASL_PLAINTEXT:
-				loginContext.login();
-				securityConfigs.put("subject", loginContext.getSubject());
-				securityConfigs.put("servicePrincipal", kafkaServicePrincipal);
-				break;
-			default:
-				throw new AuthenticationException(String.format(
-					 "kafka.security.protocol=%s not recognized or supported within a login context",
-					 kafkaSecurityProtocol));
-		}
-	}
 	public List<String> getMetadataBrokerList() {
 		return metadataBrokerList;
 	}
@@ -276,34 +232,6 @@ public class ConsumerConfiguration {
 	 */
 	public void setSocketTimeoutMs(int socketTimeoutMs) {
 		this.socketTimeoutMs = socketTimeoutMs;
-	}
-
-	/**
-	 * @return the kafkaServicePrincipal
-	 */
-	public String getKafkaServicePrincipal() {
-		return kafkaServicePrincipal;
-	}
-
-	/**
-	 * @return the kafkaSecurityProtocol
-	 */
-	public Protocol getKafkaSecurityProtocol() {
-		return kafkaSecurityProtocol;
-	}
-
-	/**
-	 * @return the jaasLoginContextName
-	 */
-	public String getJaasLoginContextName() {
-		return jaasLoginContextName;
-	}
-
-	/**
-	 * @return the securityConfigs
-	 */
-	public HashMap<String, Object> getSecurityConfigs() {
-		return securityConfigs;
 	}
 
 	/**
