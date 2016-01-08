@@ -151,7 +151,7 @@ public class Consumer {
 	 * @param metrics the instance of MetricRegistry to use for reporting metrics.
 	 */
 	public Consumer(ConsumerConfiguration conf, String clientId, String topic, int partition, long offset, MetricRegistry metrics) throws BrokerUnavailableException {
-		LOG.info("[{}-{}] creating consumer for  from offset {}", topic, partition, offset);
+		LOG.info("[{}-{}] creating consumer from offset {}", topic, partition, offset);
 
 		this.conf = conf;
 

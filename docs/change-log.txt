@@ -2,6 +2,8 @@ Changes in Krackle 0.9.0
 
 - KRAC-4: New package com.blackberry.bdp.krackle.auth
 - KRAC-4: New Authenticator interface with implementations for PlainText and SaslPlainText
+- KRAC-12: Fixes typo in consumer log
+- KRAC-14: Clean up/Organize and document klogger JMX stats 
 
 Changes in Krackle 0.8.3
 

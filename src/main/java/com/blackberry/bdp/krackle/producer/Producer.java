@@ -794,7 +794,7 @@ public class Producer {
 			this.clientThreadIdBytes = clientThreadIdString.getBytes(UTF8);
 			this.clientThreadIdLength = (short) clientThreadIdString.length();
 
-			String metricName = "krackle:producer:" + topicString + ":thread_" + Thread.currentThread().getName() + ":blockTransmitTime - ms";
+			String metricName = "krackle:producer:topics:" + topicString + ":thread_" + Thread.currentThread().getName() + ":blockTransmitTime - ms";
 
 			LOG.info("Trying to create a metric named: {}", metricName);
 
