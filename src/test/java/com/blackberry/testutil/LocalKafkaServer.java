@@ -22,7 +22,9 @@ import java.util.Properties;
 import kafka.admin.TopicCommand;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
-
+import kafka.admin.TopicCommand.*;
+import org.apache.kafka.common.security.JaasUtils;
+import kafka.utils.ZkUtils;
 import org.apache.commons.io.FileUtils;
 
 public class LocalKafkaServer {
@@ -32,6 +34,7 @@ public class LocalKafkaServer {
 	private String logDir = FileUtils.getTempDirectoryPath() + "/kafka.log";
 	private String zkConnect = "localhost:21818";
 	private KafkaServerStartable server;
+	private ZkUtils zkUtils;
 
 	public LocalKafkaServer() throws IOException {
 
@@ -47,6 +50,12 @@ public class LocalKafkaServer {
 		props.put("host.name", "127.0.0.1");
 		KafkaConfig conf = new KafkaConfig(props);
 
+                zkUtils = ZkUtils.apply(props.getProperty("zookeeper.connect"),
+                          30000,
+                          30000,
+                          JaasUtils.isZkSecurityEnabled());
+
+
 		server = new KafkaServerStartable(conf);
 		server.startup();
 	}
@@ -58,9 +67,10 @@ public class LocalKafkaServer {
 	}
 
 	public void createTopic(String topic) {
-		TopicCommand.main(new String[]{"--create", "--zookeeper",
-			"localhost:21818", "--replication-factor", "1", "--partition", "1",
-			"--topic", topic});
+		TopicCommandOptions createOpts = new TopicCommandOptions(new String[]{"--create", "--zookeeper",
+                        "localhost:21818", "--replication-factor", "1", "--partition", "1",
+                        "--topic", topic});
+                TopicCommand.createTopic(zkUtils,createOpts);
 	}
 
 }
