@@ -42,6 +42,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import java.net.InetSocketAddress;
 
 /**
  * An implementation of the Kafka 0.8 producer.
@@ -75,9 +76,9 @@ public class Producer {
 	// Various configs
 	private short requiredAcks;
 	private int brokerTimeout;
-	private int retries;
-	private int retryBackoffMs;
-	private int retryBackoffExponent;
+	private final int maxRetries;
+	private final int startingRetryBackoffMs;
+	private final int retryBackoffExponent;
 	private int compressionLevel;
 
 	private long topicMetadataRefreshIntervalMs;
@@ -149,6 +150,10 @@ public class Producer {
 		this.keyLength = keyBytes.length;
 
 		this.partitionModifier = 0;
+
+		startingRetryBackoffMs = conf.getRetryBackoffMs();
+		maxRetries = conf.getMessageSendMaxRetries();
+		retryBackoffExponent = conf.getRetryBackoffExponent();
 
 		if (metrics == null) {
 			this.metrics = MetricRegistrySingleton.getInstance().getMetricsRegistry();
@@ -235,10 +240,7 @@ public class Producer {
 
 	private void configure() throws Exception {
 		requiredAcks = conf.getRequestRequiredAcks();
-		retryBackoffMs = conf.getRetryBackoffMs();
 		brokerTimeout = conf.getRequestTimeoutMs();
-		retries = conf.getMessageSendMaxRetries();
-		retryBackoffExponent = conf.getRetryBackoffExponent();
 		sendBufferSize = conf.getSendBufferSize();
 		topicMetadataRefreshIntervalMs = conf.getTopicMetadataRefreshIntervalMs();
 		queueBufferingMaxMs = conf.getQueueBufferingMaxMs();
@@ -454,6 +456,7 @@ public class Producer {
 		private int responseCorrelationId;
 		private short responseErrorCode;
 		private int retry;
+		private long retryBackoffMs;
 
 		private Socket socket;
 		private OutputStream out;
@@ -548,8 +551,11 @@ public class Producer {
 				}
 
 				try {
-					socket = new Socket(broker.getHost(), broker.getPort());
+					socket = new Socket();
 					socket.setSendBufferSize(conf.getSendBufferSize());
+					socket.connect(
+						 new InetSocketAddress(broker.getHost(), broker.getPort()),
+						 conf.getInitialSocketConnectionTimeoutMs());
 					socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
 					LOG.info("Connected to {}", socket);
 					in = socket.getInputStream();
@@ -667,7 +673,8 @@ public class Producer {
 
 				// Send it!
 				retry = 0;
-				while (retry <= retries) {
+				retryBackoffMs = startingRetryBackoffMs;
+				while (retry <= maxRetries) {
 					try {
 						if (metadata == null || socket == null) {
 							updateMetaDataAndConnection();
@@ -739,8 +746,8 @@ public class Producer {
 
 						retry++;
 
-						if (retry <= retries) {
-							LOG.warn("Request failed. Retrying {} more times for {}.", retries - retry + 1, topicString, t);
+						if (retry <= maxRetries) {
+							LOG.warn("Request failed. Retrying {} more times for {}.", maxRetries - retry + 1, topicString, t);
 							try {
 								Thread.sleep(retryBackoffMs);
 								retryBackoffMs = retryBackoffMs * retryBackoffExponent;
