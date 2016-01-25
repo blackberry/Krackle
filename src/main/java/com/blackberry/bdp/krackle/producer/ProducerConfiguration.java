@@ -171,6 +171,7 @@ public class ProducerConfiguration {
 	private List<String> metadataBrokerList;
 	private short requestRequiredAcks;
 	private int requestTimeoutMs;
+	private int initialSocketConnectionTimeoutMs;
 
 	private String compressionCodec;
 	private int messageSendMaxRetries;
@@ -212,6 +213,7 @@ public class ProducerConfiguration {
 		queueBufferingMaxMs = parseQueueBufferingMaxMs("queue.buffering.max.ms", "5000");
 		requestRequiredAcks = parseRequestRequiredAcks("request.required.acks", "1");
 		requestTimeoutMs = parseRequestTimeoutMs("request.timeout.ms", "10000");
+		initialSocketConnectionTimeoutMs = Integer.parseInt(props.getProperty("initial.socket.connection.timeout.ms", "3000"));
 		messageSendMaxRetries = parseMessageSendMaxRetries("message.send.max.retries", "3");
 		retryBackoffMs = parseRetryBackoffMs("retry.backoff.ms", "100");
 		retryBackoffExponent = parseRetryBackoffMs("retry.backoff.exponent", "1");
@@ -763,6 +765,13 @@ public class ProducerConfiguration {
 	 */
 	public AuthenticatedSocketBuilder getAuthSocketBuilder() {
 		return authSocketBuilder;
+	}
+
+	/**
+	 * @return the initialSocketConnectionTimeoutMs
+	 */
+	public int getInitialSocketConnectionTimeoutMs() {
+		return initialSocketConnectionTimeoutMs;
 	}
 
 }
