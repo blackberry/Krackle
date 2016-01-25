@@ -730,6 +730,8 @@ public class Producer {
 								in.read(responseBytes, 0, responseBytes.length);
 							}
 						}
+						mSent.mark(messageSetBuffer.getBatchSize());
+						mSentTotal.mark(messageSetBuffer.getBatchSize());
 
 						break;
 					} catch (Throwable t) {
@@ -767,8 +769,6 @@ public class Producer {
 				}
 
 				toSendBuffer.clear();
-				mSent.mark(messageSetBuffer.getBatchSize());
-				mSentTotal.mark(messageSetBuffer.getBatchSize());
 
 				// Periodic metadata refreshes.
 				if ((topicMetadataRefreshIntervalMs >= 0

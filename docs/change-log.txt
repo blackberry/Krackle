@@ -4,6 +4,9 @@ Changes in Krackle 0.9.0
 - KRAC-4: New Authenticator interface with implementations for PlainText and SaslPlainText
 - KRAC-12: Fixes typo in consumer log
 - KRAC-14: Clean up/Organize and document klogger JMX stats 
+- KRAC-15: Fix Unit Test that is causing all downstream project builds to fail
+- KRAC-16: Fix retry bug and improve socket timeout error handling
+- KRAC-17: Don't incremenet bytes sent for dropped messages
 
 Changes in Krackle 0.8.3
 
