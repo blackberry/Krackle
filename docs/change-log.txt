@@ -17,7 +17,7 @@ Changes in Krackle 0.9.0
 
 Changes in Krackle 0.8.3
 
-- Matt?
+- KRAC-2: Krackle should deal with hosts with mutiple A records correctly
 
 Changes in Krackle 0.8.2
 
