@@ -562,7 +562,6 @@ public class Producer {
 					socket.connect(new InetSocketAddress(broker.getHost(), broker.getPort()),
 						 conf.getInitialSocketConnectionTimeoutMs());
 					socket = conf.getAuthSocketBuilder().build(socket);
-					//socket = conf.getAuthSocketBuilder().build(broker.getHost(), broker.getPort());
 					socket.setSendBufferSize(conf.getSendBufferSize());
 					socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
 					LOG.info("Connected to {}", socket);
