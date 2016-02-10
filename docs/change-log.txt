@@ -1,13 +1,23 @@
 Changes in Krackle 0.9.0
 
 - KRAC-4: New package com.blackberry.bdp.krackle.auth
-- KRAC-4: New Authenticator interface with implementations for PlainText and SaslPlainText
+- KRAC-5: Add Authentication package
+- KRAC-6: Update Producer, Consumer, and Metadata to Support Configurable Autentication Protocol
+- KRAC-7: Use Proper Principal
+- KRAC-8: Auto Renew TGT with SASL_PLAINTEXT
+- KRAC-9: Support All Topics
+- KRAC-10: Further Enhance MetaData to Fully Support KaBoom API
+- KRAC-11: Use the Login API within ConsumerConfiguration
 - KRAC-12: Fixes typo in consumer log
-- KRAC-14: Clean up/Organize and document klogger JMX stats 
+- KRAC-14: Clean up/Organize and document klogger JMX stats
+- KRAC-15: Fix Unit Test that is causing all downstream project builds to fail
+- KRAC-16: Fix retry bug and improve socket timeout error handling
+- KRAC-17: Don't increment bytes sent for dropped messages
+- KRAC-18: Rename jaas.gssapi.login.context.name to kafka.client.jaas.login.context
 
 Changes in Krackle 0.8.3
 
-- Matt?
+- KRAC-2: Krackle should deal with hosts with mutiple A records correctly
 
 Changes in Krackle 0.8.2
 

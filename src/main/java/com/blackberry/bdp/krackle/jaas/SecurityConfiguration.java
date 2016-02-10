@@ -37,7 +37,7 @@ public class SecurityConfiguration {
 		kafkaSecurityProtocol = AuthenticatedSocketBuilder.Protocol.valueOf(
 			 props.getProperty("kafka.security.protocol", "PLAINTEXT").trim().toUpperCase());
 		kafkaServicePrincipal = props.getProperty("kafka.security.protocol.service.principal", "kafka").trim();
-		jaasLoginContextName = props.getProperty("jaas.gssapi.login.context.name", "kafkaClient").trim();
+		jaasLoginContextName = props.getProperty("kafka.client.jaas.login.context", "kafkaClient").trim();
 		configuration = new HashMap<>();
 		configureSecurity();
 	}
