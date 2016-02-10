@@ -22,7 +22,6 @@ limitations under the License.
 	<artifactId>krackle</artifactId>
 	<version>0.9.0</version>
 	<packaging>jar</packaging>
-
 	<name>krackle-0.9.0</name>
 	<url>http://blackberry.com</url>
 
