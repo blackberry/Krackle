@@ -100,6 +100,9 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 	public void configure(Map<String, ?> configs) throws
 		 MissingConfigurationException, InvalidConfigurationTypeException, SaslException {
 
+		// No longer required to be specified in config map allows config map to be shared
+		hostname = socket.getInetAddress().getHostName();
+
 		if (!configs.containsKey("subject")) {
 			throw new MissingConfigurationException("`subject` not defined in configration");
 		} else if (!configs.get("subject").getClass().equals(Subject.class)) {
@@ -126,17 +129,7 @@ public class SaslPlainTextAuthenticator implements Authenticator{
 		} else {
 			clientPrincipal = (String) configs.get("clientPrincipal");
 		}
-
-		if (!configs.containsKey("hostname")) {
-			throw new MissingConfigurationException("`hostname` not defined in configration");
-		} else if (!configs.get("hostname").getClass().equals(String.class)) {
-			String type = String.class.getCanonicalName();
-			throw new InvalidConfigurationTypeException("`hostname` is not a " + type);
-		} else {
-			hostname = (String) configs.get("hostname");
-		}
-
-
+		
 		this.saslClient = createSaslClient();
 		configured = true;
 		LOG.info("authenticator has been configured");

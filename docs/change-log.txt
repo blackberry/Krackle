@@ -1,3 +1,7 @@
+Changes in Krackle 0.9.2
+
+- KRAC-22: Authentication Enhancements (AuthenticatedSocketBuilder is now a Singleton, deprecated SecurityConfiguration, and SaslPlainTextAuthenticator no longer requires the  host name in the configuration mapping instead it pulls it off the socket (using either the FQDN if one was used or a reverse lookup)
+
 Changes in Krackle 0.9.1
 
 - KRAC-20: Release 0.9.1 as builds of 0.9.0 were made available that didn't include KRAC-16 and KRAC-17

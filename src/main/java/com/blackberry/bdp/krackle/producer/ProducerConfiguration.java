@@ -15,8 +15,7 @@
  */
 package com.blackberry.bdp.krackle.producer;
 
-import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
-import com.blackberry.bdp.krackle.jaas.SecurityConfiguration;
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketSingleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -191,10 +190,6 @@ public class ProducerConfiguration {
 	private int compressionLevel;
 	private boolean useSharedBuffers;
 
-	// Security properties and objects
-	private final AuthenticatedSocketBuilder authSocketBuilder;
-
-
 	/**
 	 * ProducerConfiguration class that supports parsing properties that all support
 	 * being prefixed with a topic name for overriding default values per topic as required
@@ -228,7 +223,7 @@ public class ProducerConfiguration {
 		// The (receive) buffers are a special story, so we'll parse and set them in one go.
 		parseAndSetBuffers("use.shared.buffers", "false", "message.buffer.size", "" + ONE_MB, "num.buffers", "2");
 
-		authSocketBuilder = new AuthenticatedSocketBuilder(new SecurityConfiguration(props));
+		AuthenticatedSocketSingleton.getInstance().configure(props);
 	}
 
 
@@ -717,7 +712,7 @@ public class ProducerConfiguration {
 
 	/**
 	 *
-	 * @param the type of partitions rotation to use
+	 * @param partitionsRotate
 	 */
 	public void setPartitionsRotate(int partitionsRotate) {
 		this.partitionsRotate = partitionsRotate;
@@ -758,13 +753,6 @@ public class ProducerConfiguration {
 	 */
 	public int getRetryBackoffExponent() {
 		return retryBackoffExponent;
-	}
-
-	/**
-	 * @return the authSocketBuilder
-	 */
-	public AuthenticatedSocketBuilder getAuthSocketBuilder() {
-		return authSocketBuilder;
 	}
 
 	/**

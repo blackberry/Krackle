@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.KafkaError;
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketSingleton;
 import com.blackberry.bdp.krackle.meta.Broker;
 import com.blackberry.bdp.krackle.meta.MetaData;
 import com.codahale.metrics.Meter;
@@ -599,14 +600,13 @@ public class Consumer {
 
 		while (!stopping) {
 			try {
-				MetaData meta = MetaData.getMetaData(conf.getAuthSocketBuilder(),
-					 conf.getMetadataBrokerList(),
+				MetaData meta = MetaData.getMetaData(conf.getMetadataBrokerList(),
 					 topic,
 					 clientId);
 				broker = meta.getTopic(topic).getPartition(partition).getLeader();
 				LOG.info("[{}-{}] connecting to broker {}", topic, partition, broker.getNiceDescription());
 
-				brokerSocket = conf.getAuthSocketBuilder().build(broker.getHost(), broker.getPort());
+				brokerSocket = AuthenticatedSocketSingleton.getInstance().build(broker.getHost(), broker.getPort());
 				brokerSocket.setSoTimeout(conf.getSocketTimeoutMs());
 				brokerSocket.setKeepAlive(true);
 				brokerSocket.setReceiveBufferSize(conf.getSocketReceiveBufferBytes());

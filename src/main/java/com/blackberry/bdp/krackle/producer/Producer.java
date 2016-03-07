@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.blackberry.bdp.krackle.Constants;
 import com.blackberry.bdp.krackle.KafkaError;
 import com.blackberry.bdp.common.jmx.MetricRegistrySingleton;
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketSingleton;
 import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
 import com.blackberry.bdp.krackle.compression.Compressor;
 import com.blackberry.bdp.krackle.compression.GzipCompressor;
@@ -512,8 +513,7 @@ public class Producer {
 
 		private void updateMetaDataAndConnection() throws MissingPartitionsException {
 			LOG.info("Updating metadata");
-			metadata = MetaData.getMetaData(conf.getAuthSocketBuilder(),
-				 conf.getMetadataBrokerList(),
+			metadata = MetaData.getMetaData(conf.getMetadataBrokerList(),
 				 topicString,
 				 clientIdString);
 			LOG.debug("Metadata: {}", metadata);
@@ -561,7 +561,7 @@ public class Producer {
 					socket = new Socket();
 					socket.connect(new InetSocketAddress(broker.getHost(), broker.getPort()),
 						 conf.getInitialSocketConnectionTimeoutMs());
-					socket = conf.getAuthSocketBuilder().build(socket);
+					socket = AuthenticatedSocketSingleton.getInstance().build(socket);
 					socket.setSendBufferSize(conf.getSendBufferSize());
 					socket.setSoTimeout(conf.getRequestTimeoutMs() + 1000);
 					LOG.info("Connected to {}", socket);
