@@ -82,8 +82,7 @@ public class KafkaClientTest {
 		while (true) {
 			MetaData meta;
 			try {
-				meta = MetaData.getMetaData(producerConf.getAuthSocketBuilder(),
-					 producerConf.getMetadataBrokerList(),
+				meta = MetaData.getMetaData(producerConf.getMetadataBrokerList(),
 					 topic, "test");
 				meta.getTopic(topic).getPartition(0).getLeader();
 				break;

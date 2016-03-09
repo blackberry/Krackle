@@ -18,15 +18,19 @@ package com.blackberry.bdp.krackle.auth;
 import com.blackberry.bdp.krackle.exceptions.MissingConfigurationException;
 import com.blackberry.bdp.krackle.exceptions.InvalidConfigurationTypeException;
 import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
-import com.blackberry.bdp.krackle.jaas.SecurityConfiguration;
+import com.blackberry.bdp.krackle.jaas.Login;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.Map;
+import java.util.HashMap;
+import java.util.Properties;
+import javax.security.auth.login.LoginException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AuthenticatedSocketBuilder {
+public class AuthenticatedSocketSingleton {
+
+	private static final Logger LOG = LoggerFactory.getLogger(AuthenticatedSocketSingleton.class);
 
 	public static enum Protocol {
 		PLAINTEXT,
@@ -35,51 +39,48 @@ public class AuthenticatedSocketBuilder {
 		SASL_SSL
 	}
 
-	private final Protocol protocol;
-	private Map<String, Object> securityConfigs;
+	private Protocol kafkaSecurityProtocol;
+	private HashMap<String, Object> configuration;
 
-	private static final Logger LOG = LoggerFactory.getLogger(
-		 AuthenticatedSocketBuilder.class);
-
-	/**
-	 * Create an AuthenticatedSocketBuilder from a SecurityConfiguration
-	 * @param configuration
-	 */
-	public AuthenticatedSocketBuilder(SecurityConfiguration configuration) {
-		this(configuration.getKafkaSecurityProtocol(), configuration.getConfiguration());
+	private AuthenticatedSocketSingleton() {
+		kafkaSecurityProtocol = Protocol.PLAINTEXT;
+		configuration = new HashMap<>();
 	}
 
-	public AuthenticatedSocketBuilder(String protocolString,
-		 Map<String, Object> securityConfigs) throws AuthenticationException {
-		this.securityConfigs = securityConfigs;
-		switch (protocolString.trim().toUpperCase()) {
-			case "PLAINTEXT":
-				protocol = Protocol.PLAINTEXT;
+	private static class SingletonHolder {
+		public static final AuthenticatedSocketSingleton INSTANCE = new AuthenticatedSocketSingleton();
+	}
+
+	public static AuthenticatedSocketSingleton getInstance() {
+		return SingletonHolder.INSTANCE;
+	}
+
+
+	public void configure(Properties props)
+		 throws AuthenticationException, LoginException {
+		configuration = new HashMap<>();
+
+		kafkaSecurityProtocol = AuthenticatedSocketSingleton.Protocol.valueOf(
+			 props.getProperty("kafka.security.protocol", "PLAINTEXT").trim().toUpperCase());
+
+		switch (kafkaSecurityProtocol) {
+			case PLAINTEXT:
 				break;
-			case "SSL":
-				protocol = Protocol.SSL;
-				break;
-			case "SASL_PLAINTEXT":
-				protocol = Protocol.SASL_PLAINTEXT;
-				break;
-			case "SASL_SSL":
-				protocol = Protocol.SASL_SSL;
+			case SASL_PLAINTEXT:
+				Login login = new Login(
+					 props.getProperty("kafka.client.jaas.login.context", "kafkaClient").trim(),
+					 new Login.ClientCallbackHandler());
+				login.startThreadIfNeeded();
+				configuration.put("subject", login.getSubject());
+				configuration.put("clientPrincipal", login.getPrincipal());
+				configuration.put("servicePrincipal", props.getProperty(
+					 "kafka.security.protocol.service.principal", "kafka").trim());
 				break;
 			default:
 				throw new AuthenticationException(String.format(
-					 "protocol %s not recognized", protocolString));
+					 "kafka.security.protocol=%s not recognized or supported",
+					 kafkaSecurityProtocol));
 		}
-	}
-
-	/**
-	 * Create an AuthenticatedSocketBuilder from a protocol and configuration map
-	 * @param protocol
-	 * @param securityConfigs
-	 */
-	public AuthenticatedSocketBuilder(Protocol protocol,
-		 Map<String, Object> securityConfigs) {
-		this.protocol = protocol;
-		this.securityConfigs = securityConfigs;
 	}
 
 	public Socket build(InetAddress host, int port)
@@ -114,34 +115,35 @@ public class AuthenticatedSocketBuilder {
 
 	public Socket build(Socket socket) throws AuthenticationException {
 		try {
-			switch (protocol) {
+			switch (kafkaSecurityProtocol) {
 				case PLAINTEXT:
-					PlainTextAuthenticator pta
-						 = new PlainTextAuthenticator(socket);
+					PlainTextAuthenticator pta = new PlainTextAuthenticator(socket);
 					return pta.getSocket();
 				case SASL_PLAINTEXT:
-					SaslPlainTextAuthenticator spta
-						 = new SaslPlainTextAuthenticator(socket);
-					LOG.debug("using remote hostname {}",
-						 socket.getInetAddress().getHostName());
-					securityConfigs.put("hostname", socket.getInetAddress().getHostName());
-					spta.configure(securityConfigs);
+					SaslPlainTextAuthenticator spta = new SaslPlainTextAuthenticator(socket);
+					spta.configure(configuration);
 					spta.authenticate();
 					LOG.info("sasl authenticated socket has been created");
-					return spta.getSocket();
+					return socket;
 				default:
 					throw new AuthenticationException(
-						 String.format("%s not supported", protocol));
+						 String.format("%s not supported", kafkaSecurityProtocol));
 			}
 		} catch (IOException | MissingConfigurationException | InvalidConfigurationTypeException | AuthenticationException e) {
-			LOG.error("an {} exception occured {}: ",
-				 e.getClass().getCanonicalName(),
-				 e.getMessage(),
+			LOG.error("failed to build socket to {}: ",
+				 socket.getInetAddress().getHostName(),
 				 e);
 			throw new AuthenticationException(
 				 String.format("failed to a authenticate %s", e.getMessage()));
 
 		}
+	}
+
+	/**
+	 * @return the kafkaSecurityProtocol
+	 */
+	public AuthenticatedSocketSingleton.Protocol getKafkaSecurityProtocol() {
+		return kafkaSecurityProtocol;
 	}
 
 }

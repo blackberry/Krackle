@@ -15,8 +15,7 @@
  */
 package com.blackberry.bdp.krackle.consumer;
 
-import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
-import com.blackberry.bdp.krackle.jaas.SecurityConfiguration;
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketSingleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -85,7 +84,6 @@ import org.slf4j.LoggerFactory;
 public class ConsumerConfiguration {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ConsumerConfiguration.class);
-	private final Properties props;
 	private List<String> metadataBrokerList;
 	private int fetchMessageMaxBytes;
 	private int fetchWaitMaxMs;
@@ -93,9 +91,6 @@ public class ConsumerConfiguration {
 	private int socketReceiveBufferBytes;
 	private String autoOffsetReset;
 	private int socketTimeoutMs;
-
-	// Security properties and objects
-	private final AuthenticatedSocketBuilder authSocketBuilder;
 
 	/**
 	 * Creates a new configuration from a given Properties object.
@@ -105,7 +100,6 @@ public class ConsumerConfiguration {
 	 */
 	public ConsumerConfiguration(Properties props) throws Exception {
 		LOG.info("Building configuration.");
-		this.props = props;
 
 		metadataBrokerList = new ArrayList<>();
 		String metadataBrokerListString = props.getProperty("metadata.broker.list");
@@ -169,7 +163,7 @@ public class ConsumerConfiguration {
 			throw new Exception("socket.timeout.seconds must be positive.");
 		}
 
-		authSocketBuilder = new AuthenticatedSocketBuilder(new SecurityConfiguration(props));
+		AuthenticatedSocketSingleton.getInstance().configure(props);
 	}
 
 	public List<String> getMetadataBrokerList() {
@@ -232,13 +226,6 @@ public class ConsumerConfiguration {
 	 */
 	public void setSocketTimeoutMs(int socketTimeoutMs) {
 		this.socketTimeoutMs = socketTimeoutMs;
-	}
-
-	/**
-	 * @return the authSocketBuilder
-	 */
-	public AuthenticatedSocketBuilder getAuthSocketBuilder() {
-		return authSocketBuilder;
 	}
 
 }

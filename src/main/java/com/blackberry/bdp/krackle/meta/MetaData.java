@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.blackberry.bdp.krackle.Constants;
-import com.blackberry.bdp.krackle.auth.AuthenticatedSocketBuilder;
+import com.blackberry.bdp.krackle.auth.AuthenticatedSocketSingleton;
 import com.blackberry.bdp.krackle.exceptions.AuthenticationException;
 import java.util.Arrays;
 
@@ -60,18 +60,16 @@ public class MetaData {
 	/**
 	 * Metadata for a single topic with a string of seed brokers for a given client
 	 *
-	 * @param authSocketBuilder
 	 * @param metadataBrokerString
 	 * @param topic topic to get metadata about.
 	 * @param clientIdString clientId to send with request.
 	 * @return a new MetaData object containing information on the topic.
 	 */
-	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
+	public static MetaData getMetaData(
 		 String metadataBrokerString,
 		 String topic,
 		 String clientIdString) {
-		return getMetaData(authSocketBuilder,
-			 Arrays.asList(metadataBrokerString.split(",")),
+		return getMetaData(Arrays.asList(metadataBrokerString.split(",")),
 			 topic,
 			 clientIdString);
 	}
@@ -79,14 +77,12 @@ public class MetaData {
 	/**
 	 * Metadata for a single topic with a list of seed brokers for a given client
 	 *
-	 * @param authSocketBuilder
 	 * @param metadataBrokerList
 	 * @param topic topic to get metadata about.
 	 * @param clientIdString clientId to send with request.
 	 * @return a new MetaData object containing information on the topic.
 	 */
-	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
-		 List<String> metadataBrokerList,
+	public static MetaData getMetaData(List<String> metadataBrokerList,
 		 String topic,
 		 String clientIdString) {
 		LOG.info("Getting metadata for {}", topic);
@@ -97,37 +93,31 @@ public class MetaData {
 		metadata.clientId = clientIdString.getBytes(UTF8);
 
 		return getMetaData(metadata,
-			 buildMetadataRequest(metadata, topic.getBytes(UTF8)),
-			 authSocketBuilder);
+			 buildMetadataRequest(metadata, topic.getBytes(UTF8)));
 	}
 
 	/**
 	 * Metadata for all topics with a string of seed brokers for a given client
 	 *
-	 * @param authSocketBuilder
 	 * @param metadataBrokerString
 	 * @param clientIdString clientId to send with request.
 	 * @return a new MetaData object containing information on the topic.
 	 */
-	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
-		 String metadataBrokerString,
+	public static MetaData getMetaData(String metadataBrokerString,
 		 String clientIdString) {
 
-		return getMetaData(authSocketBuilder,
-			 Arrays.asList(metadataBrokerString.split(",")),
+		return getMetaData(Arrays.asList(metadataBrokerString.split(",")),
 			 clientIdString);
 	}
 
 	/**
 	 * Metadata for all topics with a list of seed brokers for a given client
 	 *
-	 * @param authSocketBuilder
 	 * @param metadataBrokerList
 	 * @param clientIdString clientId to send with request.
 	 * @return a new MetaData object containing information on the topic.
 	 */
-	public static MetaData getMetaData(AuthenticatedSocketBuilder authSocketBuilder,
-		 List<String> metadataBrokerList,
+	public static MetaData getMetaData(List<String> metadataBrokerList,
 		 String clientIdString) {
 		LOG.info("Getting metadata for all topics");
 
@@ -136,13 +126,10 @@ public class MetaData {
 		metadata.correlationId = (int) System.currentTimeMillis();
 		metadata.clientId = clientIdString.getBytes(UTF8);
 
-		return getMetaData(metadata,
-			 buildMetadataRequest(metadata),
-			 authSocketBuilder);
+		return getMetaData(metadata,buildMetadataRequest(metadata));
 	}
 
-	private static MetaData getMetaData(MetaData metadata,
-		 byte[] request, AuthenticatedSocketBuilder authSocketBuilder) {
+	private static MetaData getMetaData(MetaData metadata, byte[] request) {
 
 		// Get the broker seeds from the config.
 		List<HostAndPort> seedBrokers = new ArrayList<>();
@@ -163,7 +150,7 @@ public class MetaData {
 		Socket sock = null;
 		for (HostAndPort hnp : seedBrokers) {
 			try {
-				sock = authSocketBuilder.build(hnp.host, hnp.port);
+				sock = AuthenticatedSocketSingleton.getInstance().build(hnp.host, hnp.port);
 				sock.setSoTimeout(5000);
 			} catch (AuthenticationException  e) {
 				LOG.warn("authentication exception: {}", hnp.host);
