@@ -20,9 +20,9 @@ limitations under the License.
 
 	<groupId>com.blackberry.bdp.krackle</groupId>
 	<artifactId>krackle</artifactId>
-	<version>0.9.2-SNAPSHOT</version>
+	<version>0.9.2</version>
 	<packaging>jar</packaging>
-	<name>krackle-0.9.2-SNAPSHOT</name>
+	<name>krackle-0.9.2</name>
 	<url>http://blackberry.com</url>
 
 	<properties>
