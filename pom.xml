@@ -55,12 +55,6 @@ limitations under the License.
 			<version>1.1.1.7</version>
 		</dependency>
 
-		<dependency>
-			<groupId>com.blackberry.bdp.common</groupId>
-			<artifactId>bdp-common</artifactId>
-			<version>0.5.2</version>
-		</dependency>
-
 		<!-- Testing dependencies -->
 		<dependency>
 			<groupId>junit</groupId>
